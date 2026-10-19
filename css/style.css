@@ -237,4 +237,6 @@ button, select { font-family: inherit; }
   .center { height: 70vh; }
   .top-controls .btn { padding: 6px 8px; }
   .brand p { display: none; }
+  /* 좁은 화면에서는 전투 제목 배너가 [지형] 버튼을 가리므로 숨긴다 (제목은 오른쪽 패널과 해설에 표시) */
+  .battle-banner { display: none; }
 }
