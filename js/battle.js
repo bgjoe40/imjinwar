@@ -220,7 +220,7 @@ const Battle = (() => {
       <div class="card unit-list" id="btUnits">${ids.filter((id) => B.units[id].s).map((id) => {
         const u = B.units[id];
         return `<div class="unit-item" data-id="${id}" style="--c:${FACTIONS[u.f].color}">${svgIcon(u)}
-          <span class="u-name">${u.n}${u.cmd ? `<small>${u.cmd}</small>` : ''}</span><span class="val"></span></div>`;
+          <span class="u-name">${u.n}${u.cmd ? `<small>${linkNames(u.cmd)}</small>` : ''}</span><span class="val"></span></div>`;
       }).join('')}</div>
       <h3>전개 단계</h3>
       <div class="card"><ol class="phase-list" id="phaseList">${B.phases.map((p, i) => `<li data-k="${i}"><span>${p.t}</span>${p.title}</li>`).join('')}</ol></div>

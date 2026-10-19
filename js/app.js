@@ -240,7 +240,7 @@ function renderPanel(i) {
       ${statRow('군량', jf, 100, pv('j', 3), '%')}
       ${statRow('사기', jm, 100, pv('j', 4), '%')}
       ${statRow('지배 거점', cnt.K, total, undefined, `/${total}`)}
-      <div class="cmd"><b>지휘</b> ${e.c.j || '—'}</div>
+      <div class="cmd"><b>지휘</b> ${linkNames(e.c.j) || '—'}</div>
       ${e.n.j ? `<div class="note">● ${e.n.j}</div>` : ''}
     </div>
     <div class="card fac" style="--c:${FACTIONS.japan.color}">
@@ -250,7 +250,7 @@ function renderPanel(i) {
       ${statRow('군량', wf, 100, pv('w', 2), '%')}
       ${statRow('사기', wm, 100, pv('w', 3), '%')}
       ${statRow('점령 거점', cnt.J, total, undefined, `/${total}`)}
-      <div class="cmd"><b>지휘</b> ${e.c.w || '—'}</div>
+      <div class="cmd"><b>지휘</b> ${linkNames(e.c.w) || '—'}</div>
       ${e.n.w ? `<div class="note">● ${e.n.w}</div>` : ''}
     </div>
     <div class="card fac" style="--c:${FACTIONS.ming.color}${mt ? '' : ';opacity:.55'}">
@@ -259,7 +259,7 @@ function renderPanel(i) {
       ${ms || (p && p.m[1]) ? statRow('함선', ms, MAX.m[1], pv('m', 1), '척') : ''}
       ${statRow('군량', mf, 100, pv('m', 2), '%')}
       ${statRow('사기', mm, 100, pv('m', 3), '%')}
-      <div class="cmd"><b>지휘</b> ${e.c.m || '—'}</div>
+      <div class="cmd"><b>지휘</b> ${linkNames(e.c.m) || '—'}</div>
       ${e.n.m ? `<div class="note">● ${e.n.m}</div>` : ''}
     </div>
     <h3>역사적 의의</h3>
@@ -279,6 +279,68 @@ function sourcesCard(e) {
   return `<h3>근거 자료 <small>사료를 누르면 설명이 열립니다</small></h3>
     <div class="card sources"><div class="src-chips">${chips}</div>
     ${e.range ? `<div class="range"><b>수치 범위</b> ${e.range}</div>` : ''}</div>`;
+}
+
+// ── 인물 사전
+const SIDE_NAME = { joseon: '조선', uibyeong: '의병·승병', ming: '명', japan: '일본' };
+// 긴 이름부터 연결해야 '가토 요시아키'가 '가토'(가토 기요마사)로 잘못 연결되지 않는다
+const ALIAS = PEOPLE.flatMap((p) => p.alias.map((a) => ({ a, id: p.id }))).sort((x, y) => y.a.length - x.a.length);
+
+function linkNames(text) {
+  if (!text) return text || '';
+  const slots = [];
+  let s = String(text);
+  for (const { a, id } of ALIAS) {
+    if (!s.includes(a)) continue;
+    s = s.split(a).join(`\u0001${slots.length}\u0002`);
+    slots.push(`<button class="person-link" data-p="${id}">${a}</button>`);
+  }
+  return s.replace(/\u0001(\d+)\u0002/g, (_, i) => slots[+i]);
+}
+
+// 인물 → 관련 사건 (사건 설명·지휘관·전투 부대의 지휘관 이름에서 찾는다)
+const PERSON_EVENTS = (() => {
+  const map = {};
+  EVENTS.forEach((e, i) => {
+    const parts = [e.title, e.desc, e.c?.j, e.c?.w, e.c?.m];
+    if (e.battle && BATTLES[e.battle]) for (const u of Object.values(BATTLES[e.battle].units)) parts.push(u.cmd);
+    for (const m of linkNames(parts.filter(Boolean).join(' / ')).matchAll(/data-p="([^"]+)"/g)) (map[m[1]] ||= new Set()).add(i);
+  });
+  return map;
+})();
+
+function buildPeople() {
+  const q = document.getElementById('peopleSearch').value.trim();
+  const html = ['joseon', 'uibyeong', 'ming', 'japan'].map((g) => {
+    const list = PEOPLE.filter((p) => p.side === g && (!q || [p.name, p.hanja, p.role, ...p.alias].join(' ').includes(q)));
+    if (!list.length) return '';
+    return `<div class="item-group"><i style="background:${FACTIONS[g].color}"></i>${SIDE_NAME[g]} <small>${list.length}</small></div>` +
+      list.map((p) => `<button class="item" data-p="${p.id}"><div class="in">${p.name}<small>${p.hanja}</small></div><div class="ir">${p.role} · ${p.life}</div></button>`).join('');
+  }).join('');
+  document.getElementById('peopleList').innerHTML = html || '<p style="padding:14px;color:var(--muted)">찾는 인물이 없습니다.</p>';
+}
+
+function relatedEventsHtml(indexes) {
+  if (!indexes.length) return '';
+  return `<h3>관련 사건 (${indexes.length})</h3><div class="rel-list">${indexes.map((i) =>
+    `<button data-ev="${i}"><span>${EVENTS[i].date}</span>${EVENTS[i].title}</button>`).join('')}</div>`;
+}
+
+function showPerson(id) {
+  const p = PEOPLE.find((x) => x.id === id);
+  if (!p) return;
+  const rel = [...(PERSON_EVENTS[id] || [])].sort((a, b) => a - b);
+  openModal(p.name, `
+    <div class="p-head" style="--c:${FACTIONS[p.side].color}"><div class="p-seal">${p.name[0]}</div>
+      <div><div style="font-family:var(--serif);font-size:18px;font-weight:700">${p.name} <small style="color:var(--muted)">${p.hanja}</small></div>
+      <div class="p-meta"><b>${FACTIONS[p.side].name}</b> · ${p.life} · ${p.role}</div></div></div>
+    <p>${p.text}</p>
+    ${relatedEventsHtml(rel)}`);
+}
+
+function setTab(tab) {
+  document.querySelectorAll('#sideTabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
+  document.querySelectorAll('.side-pane').forEach((p) => p.classList.toggle('hidden', p.id !== `pane-${tab}`));
 }
 
 // ── 창 (모달)
@@ -366,6 +428,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const chip = ev.target.closest('.src-chip[data-src]');
     if (chip) showSources(chip.dataset.src);
   });
+  // 인물 이름·관련 사건 버튼 (패널, 창, 왼쪽 목록 어디서든)
+  document.addEventListener('click', (ev) => {
+    const p = ev.target.closest('.person-link, #peopleList .item[data-p]');
+    if (p) { showPerson(p.dataset.p); return; }
+    const rel = ev.target.closest('.rel-list button[data-ev]');
+    if (rel) { closeModal(); stopAuto(); setTab('timeline'); select(+rel.dataset.ev); }
+  });
+  document.getElementById('sideTabs').onclick = (ev) => {
+    const b = ev.target.closest('button[data-tab]');
+    if (b) setTab(b.dataset.tab);
+  };
+  document.getElementById('peopleSearch').addEventListener('input', buildPeople);
+  buildPeople();
   document.getElementById('terrainSwitch').onclick = (ev) => {
     const b = ev.target.closest('button');
     if (b) Terrain.setMode(b.dataset.mode);
