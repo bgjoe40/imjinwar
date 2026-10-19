@@ -51,7 +51,9 @@ function initMap() {
     maxZoom: 17, maxNativeZoom: 13, attribution: 'Tiles &copy; Esri',
   });
   imagery.addTo(map);
-  L.control.layers({ '위성 지형': imagery, '지형도': terrain, '고지도풍 (물길·산세만)': Terrain.makeBase('tilePane') }, null, { position: 'topright' }).addTo(map);
+  const overlays = buildOverlays();
+  overlays['조선 8도 (대략)'].addTo(map);
+  L.control.layers({ '위성 지형': imagery, '지형도': terrain, '고지도풍 (물길·산세만)': Terrain.makeBase('tilePane') }, overlays, { position: 'topright' }).addTo(map);
   map.attributionControl.setPrefix(false);
 
   App.map = map;
@@ -70,6 +72,45 @@ function initMap() {
     App.labels[id] = L.marker(p.ll, { icon: L.divIcon({ className: '', html: '', iconSize: [0, 0] }), interactive: false, keyboard: false })
       .addTo(App.gLabels);
   }
+}
+
+// 전략 지도의 추가 레이어 (전투 화면에서는 CSS로 숨긴다: .ov-strategic)
+function buildOverlays() {
+  const icon = (html, cls = '') => L.divIcon({ className: `ov-strategic ${cls}`, iconSize: [0, 0], html });
+  const mid = (pts) => pts[Math.floor(pts.length / 2)];
+
+  const do8 = L.layerGroup();
+  for (const [k, d] of Object.entries(DO8)) {
+    L.polygon(d.polys, { color: '#f3e3b5', weight: 1.3, dashArray: '5 4', opacity: 0.75, fill: false, interactive: false, className: 'ov-strategic' }).addTo(do8);
+    L.marker(DO8_LABELS[k], { interactive: false, keyboard: false, icon: icon(`<div class="do-label">${d.name}</div>`) }).addTo(do8);
+  }
+
+  const roads = L.layerGroup();
+  for (const r of ROADS) {
+    L.polyline(r.path, { color: '#d79a45', weight: 2.6, dashArray: '9 5', opacity: 0.9, interactive: false, className: 'ov-strategic' }).addTo(roads);
+    L.marker(mid(r.path), { interactive: false, keyboard: false, icon: icon(`<div class="road-label">${r.name}</div>`) }).addTo(roads);
+  }
+
+  const waeseong = L.layerGroup();
+  for (const w of WAESEONG) {
+    L.marker(w.ll, { keyboard: false, icon: icon('<div class="wae-mark">倭</div>') })
+      .bindTooltip(`<b>${w.name}</b><br>${w.note}`, { direction: 'top', offset: [0, -10] }).addTo(waeseong);
+  }
+
+  const navy = L.layerGroup();
+  L.polyline(NAVY_HQ.map((h) => h.ll), { color: '#60a5fa', weight: 2.5, dashArray: '6 6', opacity: 0.9, interactive: false, className: 'ov-strategic route-line' }).addTo(navy);
+  NAVY_HQ.forEach((h, i) => {
+    L.marker(h.ll, { keyboard: false, icon: icon(`<div class="hq-mark">${i + 1}</div>`) })
+      .bindTooltip(`<b>${i + 1}. ${h.name}</b> (${h.when})<br>${h.note}`, { direction: 'top', offset: [0, -10] }).addTo(navy);
+  });
+
+  const uib = L.layerGroup();
+  for (const u of UIBYEONG_AREAS) {
+    L.marker(u.ll, { keyboard: false, icon: icon(`<div class="uib-mark"><i></i>${u.name}</div>`) })
+      .bindTooltip(`<b>${u.name}</b><br>${u.area}`, { direction: 'top', offset: [0, -8] }).addTo(uib);
+  }
+
+  return { '조선 8도 (대략)': do8, '조선의 큰길': roads, '남해안 왜성': waeseong, '수군 본영의 이동': navy, '의병 활동 지역': uib };
 }
 
 function buildTimeline() {
