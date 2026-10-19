@@ -240,7 +240,9 @@ function renderEventCard(e) {
     <div class="ec-head"><h2>${e.title}</h2><span class="ec-date">${e.date} · ${placeName(e)}</span>
       <button class="btn collapse" id="ecMin" title="접기/펼치기">${card.classList.contains('min') ? '펼치기' : '접기'}</button></div>
     <p>${e.desc}</p>
-    <div class="ec-actions">${e.battle ? '<button class="btn primary" id="ecBattle">⚔ 전투 전개 보기</button>' : ''}</div>`;
+    <div class="ec-actions">${e.battle ? '<button class="btn primary" id="ecBattle">⚔ 전투 전개 보기</button>' : ''}${
+      ['e33', 'postwar'].includes(e.id) ? '<button class="btn primary" id="ecResults">📜 전쟁의 결과 보기</button>' : ''}</div>`;
+  document.getElementById('ecResults')?.addEventListener('click', showResults);
   document.getElementById('ecMin').onclick = () => {
     card.classList.toggle('min');
     document.getElementById('ecMin').textContent = card.classList.contains('min') ? '펼치기' : '접기';
@@ -408,6 +410,27 @@ function setTab(tab) {
   document.querySelectorAll('.side-pane').forEach((p) => p.classList.toggle('hidden', p.id !== `pane-${tab}`));
 }
 
+// ── 전쟁의 결과
+function showResults() {
+  const R = RESULTS;
+  const max = Math.max(...R.land.map((d) => d.value));
+  openModal('전쟁의 결과', `
+    <p>7년에 걸친 전쟁은 조선뿐 아니라 일본과 명, 동아시아 전체를 바꾸어 놓았다.</p>
+    <h3>숫자로 보는 피해 — 나라가 파악한 토지(전결)</h3>
+    <div class="res-chart">${R.land.map((d) => `<div class="res-row"><span>${d.label}</span>
+      <div class="bar"><div style="width:${(d.value / max) * 100}%;background:var(--gold)"></div></div><b>${d.text}</b></div>`).join('')}</div>
+    <p class="disclaimer">${R.landNote}</p>
+    <ul class="cx-facts">${R.damage.map((t) => `<li>${t}</li>`).join('')}</ul>
+    <h3>나라별로 달라진 것</h3>
+    <div class="res-cards">${R.countries.map((c) => `<div class="card fac" style="--c:${FACTIONS[c.side].color}">
+      <div class="fac-name"><i></i>${c.title}</div><ul class="cx-facts">${c.items.map((t) => `<li>${t}</li>`).join('')}</ul></div>`).join('')}</div>
+    <h3>사라진 문화유산</h3>
+    <div class="res-cards">${R.heritage.map((h) => `<div class="card"><b>${h.name}</b><p style="margin:4px 0 0">${h.text}</p></div>`).join('')}</div>
+    <h3>전쟁 뒤에 이어진 일</h3>
+    <div class="res-after">${R.after.map(([y, t]) => `<div><span>${y}</span>${t}</div>`).join('')}</div>
+    <p class="disclaimer" style="margin-top:12px">근거: ${R.src.join(' · ')}</p>`);
+}
+
 // ── 창 (모달)
 function openModal(title, html) {
   document.getElementById('modalTitle').textContent = title;
@@ -487,6 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnNext').onclick = () => { stopAuto(); select(App.idx + 1); };
   document.getElementById('btnAuto').onclick = toggleAuto;
   document.getElementById('btnSources').onclick = () => showSources();
+  document.getElementById('btnResults').onclick = showResults;
   document.getElementById('modalClose').onclick = closeModal;
   document.getElementById('modal').addEventListener('click', (ev) => { if (ev.target.id === 'modal') closeModal(); });
   document.getElementById('panel').addEventListener('click', (ev) => {
