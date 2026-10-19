@@ -132,8 +132,7 @@ const Battle = (() => {
       const el = m.getElement();
       if (!el || !u.s) continue;
       const max = maxStrength(id);
-      const unit = naval && (u.t === 'ship' || u.t === 'flag' || u.t === 'turtle') ? '척' : '';
-      el.querySelector('.tag2 b').textContent = fmt(s.s) + unit;
+      el.querySelector('.tag2 b').textContent = fmt(s.s) + suffix(u);
       el.querySelector('.hp > div').style.width = `${Math.max(0, (s.s / max) * 100)}%`;
       el.querySelector('.unit').classList.toggle('dead', s.s < 0.5);
     }
@@ -225,18 +224,22 @@ const Battle = (() => {
       }).join('')}</div>
       <h3>전개 단계</h3>
       <div class="card"><ol class="phase-list" id="phaseList">${B.phases.map((p, i) => `<li data-k="${i}"><span>${p.t}</span>${p.title}</li>`).join('')}</ol></div>
-      <p class="disclaimer">※ 부대 위치와 병력 변화는 기록을 바탕으로 전개 과정을 이해하기 쉽게 재구성한 것으로, 실제 배치와 수치는 사료마다 다릅니다.</p>`;
+      ${B.past?.note ? `<h3>당시 지형 <small>지도 왼쪽 위 [지형] 버튼으로 전환</small></h3><div class="card terrain-note">${B.past.note}</div>` : ''}
+      <p class="disclaimer">※ 부대 위치와 병력 변화는 기록을 바탕으로 전개 과정을 이해하기 쉽게 재구성한 것으로, 실제 배치와 수치는 사료마다 다릅니다. 1590년대 지형은 오늘날 지도와 옛 기록을 바탕으로 한 추정입니다.</p>`;
     $('phaseList').onclick = (ev) => {
       const li = ev.target.closest('li');
       if (li) { seek(starts[+li.dataset.k] + 0.001); }
     };
   }
 
+  const isShip = (u) => u.t === 'ship' || u.t === 'turtle' || (naval && u.t === 'flag');
+  const suffix = (u) => (isShip(u) ? '척' : '');
+
+  // 전력 합계에 넣을 부대: 해전은 함선, 육전은 병력 (nc 표시 부대는 제외)
   function counted(id) {
     const u = B.units[id];
     if (!u.s || u.nc) return false;
-    if (naval) return u.t === 'ship' || u.t === 'flag' || u.t === 'turtle';
-    return true;
+    return naval ? isShip(u) : !isShip(u);
   }
 
   function updatePanel(st) {
@@ -256,9 +259,8 @@ const Battle = (() => {
       row.querySelector('.bar > div').style.width = `${(cur / maxInit) * 100}%`;
     });
     document.querySelectorAll('#btUnits .unit-item').forEach((row) => {
-      const id = row.dataset.id, u = B.units[id];
-      const unit = naval && counted(id) ? '척' : '';
-      row.querySelector('.val').textContent = fmt(st[id].s) + unit;
+      const id = row.dataset.id;
+      row.querySelector('.val').textContent = fmt(st[id].s) + suffix(B.units[id]);
       row.classList.toggle('dead', st[id].s < 0.5);
     });
   }
@@ -330,7 +332,11 @@ const Battle = (() => {
 
   function start(battle, theMap, exitCb) {
     B = battle; map = theMap; onExit = exitCb;
-    naval = Object.values(B.units).some((u) => u.t === 'ship');
+    // 함선 부대가 지상 부대보다 많으면 해전으로 본다 (nc: 전력 합계에서 빠지는 부대)
+    const us = Object.values(B.units);
+    const ships = us.filter((u) => (u.t === 'ship' || u.t === 'turtle') && !u.nc).length;
+    const troops = us.filter((u) => ['inf', 'cav', 'arq', 'gun'].includes(u.t)).length;
+    naval = B.naval ?? ships > troops;
     for (const k in maxCache) delete maxCache[k];
     buildStates();
     layer = L.layerGroup().addTo(map);

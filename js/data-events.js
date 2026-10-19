@@ -101,7 +101,7 @@ const EVENTS = [
   },
   {
     id: 'e02', period: '1592 · 개전', date: '1592.04.14', title: '부산진 전투', type: 'land', place: 'busan',
-    result: 'japan',
+    result: 'japan', battle: 'busanjin',
     desc: '새벽 안개 속에 일본군 제1군이 부산진성을 포위했다. 첨사 정발은 수백 명의 군사와 백성을 이끌고 끝까지 싸웠으나, 조총의 일제 사격에 성벽이 무너지고 정발은 전사했다. 성은 반나절 만에 함락되었다.',
     meaning: '임진왜란 최초의 전투. 경상좌수사 박홍은 수영을 버리고 달아나 경상좌수영이 무너졌다.',
     ch: { busan: 'J' },
@@ -137,7 +137,7 @@ const EVENTS = [
   },
   {
     id: 'e05', period: '1592 · 개전', date: '1592.04.25', title: '상주 전투', type: 'land', place: 'sangju',
-    result: 'japan',
+    result: 'japan', battle: 'sangju',
     desc: '순변사 이일은 급히 모은 수백~수천의 군사로 상주에서 고니시 군을 막으려 했으나, 척후 보고를 무시하다 기습을 당해 크게 패하고 홀로 충주로 달아났다. 대구도 이미 일본군 손에 들어갔다.',
     meaning: '제승방략 체제(지방군이 집결해 중앙 장수를 기다리는 방식)의 약점이 드러났다.',
     ch: { daegu: 'J', sangju: 'J' },
@@ -185,7 +185,7 @@ const EVENTS = [
   },
   {
     id: 'e09', period: '1592 · 반격의 시작', date: '1592.05.29', title: '사천 해전 · 거북선 출전', type: 'sea', place: 'sacheon',
-    result: 'joseon',
+    result: 'joseon', battle: 'sacheon',
     desc: '이순신의 2차 출전. 사천 앞바다에서 거북선이 처음으로 실전에 나섰다. 철갑과 쇠못으로 덮인 거북선은 적진 한가운데로 돌격해 총통을 쏘았다. 이 전투에서 이순신은 왼쪽 어깨에 총탄을 맞았다. 이어 당포·당항포·율포에서도 연승했다.',
     meaning: '2차 출전에서 일본 함선 70여 척을 격파해 남해의 제해권이 조선으로 넘어오기 시작했다.',
     ch: {},
@@ -221,7 +221,7 @@ const EVENTS = [
   },
   {
     id: 'e12', period: '1592 · 반격의 시작', date: '1592.07.08', title: '이치 전투', type: 'land', place: 'geumsan',
-    result: 'joseon',
+    result: 'joseon', battle: 'ichi',
     desc: '금산을 점령한 고바야카와 다카카게의 6군이 전주를 향해 이치(배티재) 고개를 넘으려 했다. 광주목사 권율과 동복현감 황진이 고갯길에서 맞서 싸워 일본군을 물리쳤다. 같은 날 웅치에서도 김제민 등이 분전했다.',
     meaning: '한산도 대첩과 함께 전라도를 지켜 조선이 전쟁을 계속할 수 있는 식량 기지를 확보했다.',
     ch: { geumsan: 'J' },
@@ -233,7 +233,7 @@ const EVENTS = [
   },
   {
     id: 'e13', period: '1592 · 반격의 시작', date: '1592.07.17', title: '1차 평양성 전투 (명군 첫 참전)', type: 'land', place: 'pyongyang',
-    result: 'japan',
+    result: 'japan', battle: 'pyongyang1',
     desc: '명나라 요동 부총병 조승훈이 5천 군사를 이끌고 압록강을 건너 평양성을 기습했다. 그러나 비 오는 날 성 안 골목에서 조총 사격을 받고 크게 패해 요동으로 돌아갔다.',
     meaning: '명은 일본군의 전력을 실감하고 본격적인 대군 파견을 준비했다. 한편 심유경이 고니시와 휴전 협상을 시작했다.',
     ch: {},
@@ -257,7 +257,7 @@ const EVENTS = [
   },
   {
     id: 'e15', period: '1592 · 반격의 시작', date: '1592.08.01', title: '청주성 탈환 · 금산 전투', type: 'land', place: 'cheongju',
-    result: 'joseon',
+    result: 'joseon', battle: 'cheongju',
     desc: '조헌이 이끄는 의병과 승려 영규의 승병이 힘을 합쳐 청주성을 되찾았다. 이후 조헌과 영규는 금산의 일본군을 공격했으나(8.18) 700명의 의병이 모두 전사했다. 이들의 무덤이 금산의 "칠백의총"이다.',
     meaning: '의병과 승병이 처음으로 큰 성을 되찾은 사례. 금산 전투는 패했지만 일본군의 전라도 진출 의지를 꺾었다.',
     ch: { cheongju: 'K' },
@@ -269,7 +269,7 @@ const EVENTS = [
   },
   {
     id: 'e16', period: '1592 · 반격의 시작', date: '1592.09.01', title: '부산포 해전', type: 'sea', place: 'busan',
-    result: 'joseon',
+    result: 'joseon', battle: 'busanpo',
     desc: '이순신은 일본군의 본거지인 부산포를 직접 공격했다. 포구에 정박한 470여 척의 일본 함선 가운데 100여 척을 격파했다. 녹도만호 정운이 이 전투에서 전사했다. 9월 8일에는 경주에서 박진이 비격진천뢰를 사용해 경주성을 되찾았다.',
     meaning: '적의 본진을 공격해 일본군의 해상 보급에 큰 타격을 주었다.',
     ch: { gyeongju: 'K' },
@@ -307,7 +307,7 @@ const EVENTS = [
   },
   {
     id: 'e19', period: '1593 · 전세 역전', date: '1593.01.27', title: '벽제관 전투', type: 'land', place: 'haengju',
-    result: 'japan',
+    result: 'japan', battle: 'byeokje',
     desc: '평양 승리에 자신감을 얻은 이여송은 기병만 이끌고 서둘러 한양으로 진격하다가 벽제관(고양) 부근에서 고바야카와·다치바나 군의 매복에 걸려 크게 패했다. 이여송은 개성으로, 다시 평양으로 물러났다.',
     meaning: '이후 명군은 적극적인 공격을 피하고 일본과의 강화 협상에 무게를 두게 된다.',
     ch: {},
@@ -343,7 +343,7 @@ const EVENTS = [
   },
   {
     id: 'e22', period: '1593 · 전세 역전', date: '1593.06.29', title: '2차 진주성 전투', type: 'siege', place: 'jinju',
-    result: 'japan',
+    result: 'japan', battle: 'jinju2',
     desc: '히데요시는 1차 진주성 패배를 보복하라고 명령했다. 9만여 명의 일본군이 진주성을 포위했고, 김천일·최경회·황진 등이 이끄는 군민은 9일간 싸웠지만 성은 함락되었다. 성 안의 군민 수만 명이 희생되었다. 논개가 촉석루에서 일본 장수를 껴안고 남강에 몸을 던졌다는 이야기가 전한다.',
     meaning: '임진왜란 중 가장 참혹한 전투 가운데 하나. 명군은 강화 협상을 이유로 구원하지 않았다.',
     ch: { jinju: 'J' },
@@ -395,7 +395,7 @@ const EVENTS = [
   },
   {
     id: 'e26', period: '1597 · 정유재란', date: '1597.08.16', title: '남원성 전투 · 황석산성 전투', type: 'siege', place: 'namwon',
-    result: 'japan',
+    result: 'japan', battle: 'namwon',
     desc: '우키타·고니시의 좌군 5만여 명은 사천·하동을 거쳐 남원성을 포위했다. 명 부총병 양원의 3천 군사와 조선 군민이 지켰지만 4일 만에 함락되고 많은 군민이 희생되었다. 모리·가토의 우군은 함양의 황석산성(8.18)을 함락시켰다. 전주는 싸우지도 못하고 버려졌다.',
     meaning: '정유재란 때 일본군은 특히 잔혹하여 사람의 코를 베어 전공의 증거로 보냈다(교토의 "귀무덤"). 8월 3일 이순신은 다시 삼도수군통제사에 임명되었다.',
     ch: { sacheon: 'J', jinju: 'J', namwon: 'J', suncheon: 'J', yeosu: 'J', hwangseok: 'J', jeonju: 'J' },
@@ -407,7 +407,7 @@ const EVENTS = [
   },
   {
     id: 'e27', period: '1597 · 정유재란', date: '1597.09.07', title: '직산 전투', type: 'land', place: 'jiksan',
-    result: 'joseon',
+    result: 'joseon', battle: 'jiksan',
     desc: '공주·청주까지 올라온 일본군 선봉(구로다 나가마사)이 한양을 향해 북상하다 직산(천안 부근)에서 명군 기병과 맞부딪쳤다. 해생 등이 이끄는 명군이 일본군을 막아내자 일본군은 더 북진하지 못했다.',
     meaning: '육지에서 일본군의 북상을 막은 전투. 일본군은 이후 남쪽으로 후퇴하기 시작했다.',
     ch: { gongju: 'J', cheongju: 'J' },
@@ -431,7 +431,7 @@ const EVENTS = [
   },
   {
     id: 'e29', period: '1597 · 정유재란', date: '1597.12.22', title: '1차 울산성 전투', type: 'siege', place: 'ulsan',
-    result: 'japan',
+    result: 'japan', battle: 'ulsan',
     desc: '일본군은 울산부터 순천까지 남해안 왜성으로 물러났다. 조·명 연합군 5만여 명이 짓다 만 울산왜성(도산성)을 포위했다. 성 안의 가토 기요마사 군은 물과 식량이 떨어져 말을 잡아먹고 오줌을 마실 지경에 이르렀으나, 일본 구원군이 오자 연합군은 1598년 1월 4일 포위를 풀고 물러났다.',
     meaning: '연합군은 왜성 공략의 어려움을 확인했고, 전쟁은 다시 남해안 대치 국면이 되었다.',
     ch: { ulsan: 'J', jeonju: 'K', namwon: 'K', gongju: 'K', cheongju: 'K', hwangseok: 'K', jinju: 'K' },
@@ -457,7 +457,7 @@ const EVENTS = [
   },
   {
     id: 'e31', period: '1598 · 종전', date: '1598.09~10', title: '사로병진 작전', type: 'land', place: 'sacheon',
-    result: 'japan',
+    result: 'japan', battle: 'sacheon2',
     desc: '조·명 연합군은 네 갈래(사로)로 동시에 왜성을 공격했다. 동로군은 울산, 중로군은 사천, 서로군과 수로군(진린·이순신)은 순천 왜교성을 쳤다. 그러나 사천 전투(10.1)에서 중로군이 시마즈 군에 대패하는 등 왜성을 함락하지 못했다.',
     meaning: '일본군은 왜성을 지키며 철수 시기를 기다렸다. 명군 장수 일부는 뇌물을 받고 길을 열어 주려 했다.',
     ch: {},

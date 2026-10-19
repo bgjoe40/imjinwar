@@ -202,6 +202,30 @@ button, select { font-family: inherit; }
 .boom.smoke { background: radial-gradient(circle, rgba(220,220,220,.55) 0%, rgba(150,150,150,.25) 50%, rgba(120,120,120,0) 70%); animation-duration: 1.4s; }
 @keyframes boom { 0% { transform: scale(.3); opacity: 1; } 100% { transform: scale(1.8); opacity: 0; } }
 
+/* ── 지형 전환 (현재 / 1590년대 추정 / 비교) */
+.terrain-switch { position: absolute; left: 56px; top: 12px; z-index: 700; display: flex; align-items: center; gap: 2px;
+  background: rgba(16, 18, 23, .92); border: 1px solid #4a3f25; border-radius: 8px; padding: 3px; }
+.terrain-switch .ts-title { font-size: 11.5px; color: var(--gold); padding: 0 6px 0 4px; font-weight: 700; }
+.terrain-switch button { background: transparent; color: var(--text); border: 0; border-radius: 5px; padding: 5px 10px; font-size: 12.5px; cursor: pointer; }
+.terrain-switch button:hover { background: #2c3340; }
+.terrain-switch button.on { background: var(--gold); color: #1b1408; font-weight: 700; }
+.terrain-legend { position: absolute; left: 56px; top: 54px; z-index: 690; background: rgba(240, 230, 205, .93); color: #3b2a16;
+  border: 1px solid #a88a55; border-radius: 8px; padding: 7px 10px; font-size: 11.5px; display: grid; gap: 3px; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+.terrain-legend .tl-title { font-family: var(--serif); font-weight: 700; font-size: 12.5px; margin-bottom: 2px; }
+.terrain-legend i { display: inline-block; width: 18px; height: 10px; margin-right: 6px; vertical-align: -1px; border-radius: 2px; }
+.tl-water { background: rgb(134, 168, 170); border: 1px dashed #4f7b80; }
+.tl-wall { border: 3px solid #5b3a1e; height: 8px !important; }
+.tl-field { background: rgba(169, 165, 96, .45); border: 1px dashed #7d7a3c; }
+.tl-road { border-top: 3px dashed #8a5a2b; height: 0 !important; vertical-align: 3px !important; }
+.hillshade { mix-blend-mode: multiply; opacity: .62; }
+.past-label { white-space: nowrap; transform: translate(-50%, -50%); font-family: var(--serif); font-weight: 700; font-size: 12.5px;
+  color: #4a2f14; text-shadow: 0 0 3px #f3e9cf, 0 0 2px #f3e9cf, 0 0 6px #f3e9cf; letter-spacing: .5px; }
+.terrain-divider { position: absolute; top: 0; bottom: 0; left: 50%; width: 4px; margin-left: -2px; z-index: 650; background: var(--gold);
+  cursor: ew-resize; box-shadow: 0 0 6px rgba(0,0,0,.6); touch-action: none; }
+.terrain-divider span { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); white-space: nowrap; background: var(--gold);
+  color: #1b1408; font-size: 11.5px; font-weight: 700; padding: 5px 10px; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+.card.terrain-note { font-size: 12.5px; line-height: 1.6; color: #d4cebf; border-left: 3px solid #86a8aa; }
+
 /* 좁은 화면 */
 @media (max-width: 1100px) {
   .layout { grid-template-columns: 240px 1fr 290px; }

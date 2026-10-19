@@ -49,10 +49,11 @@ function initMap() {
     maxZoom: 17, maxNativeZoom: 13, attribution: 'Tiles &copy; Esri',
   });
   imagery.addTo(map);
-  L.control.layers({ '위성 지형': imagery, '지형도': terrain }, null, { position: 'topright' }).addTo(map);
+  L.control.layers({ '위성 지형': imagery, '지형도': terrain, '고지도풍 (물길·산세만)': Terrain.makeBase('tilePane') }, null, { position: 'topright' }).addTo(map);
   map.attributionControl.setPrefix(false);
 
   App.map = map;
+  Terrain.init(map);
   App.gZones = L.layerGroup().addTo(map);
   App.gLabels = L.layerGroup().addTo(map);
   App.gRoutes = L.layerGroup().addTo(map);
@@ -273,11 +274,15 @@ function startBattle(e) {
   document.getElementById('eventCard').classList.add('hidden');
   document.getElementById('mapLegend').classList.add('hidden');
   document.getElementById('map').classList.add('battle');
-  Battle.start(BATTLES[e.battle], App.map, endBattle);
+  const b = BATTLES[e.battle];
+  b.past = PAST_TERRAIN[e.battle];
+  Battle.start(b, App.map, endBattle);
+  Terrain.show(b.past);
 }
 
 function restoreStrategic() {
   App.mode = 'strategic';
+  Terrain.hide();
   for (const g of ['gZones', 'gLabels', 'gRoutes', 'gArmies', 'gPulse']) App[g].addTo(App.map);
   document.getElementById('mapLegend').classList.remove('hidden');
   document.getElementById('map').classList.remove('battle');
@@ -318,6 +323,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnPrev').onclick = () => { stopAuto(); select(App.idx - 1); };
   document.getElementById('btnNext').onclick = () => { stopAuto(); select(App.idx + 1); };
   document.getElementById('btnAuto').onclick = toggleAuto;
+  document.getElementById('terrainSwitch').onclick = (ev) => {
+    const b = ev.target.closest('button');
+    if (b) Terrain.setMode(b.dataset.mode);
+  };
   document.addEventListener('keydown', (ev) => {
     if (ev.target.tagName === 'SELECT') return;
     if (App.mode === 'battle') {
