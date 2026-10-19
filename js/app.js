@@ -124,7 +124,7 @@ function buildTimeline() {
       : e.result === 'japan' ? '<span class="tag win-japan">일본 측 우세</span>' : '';
     h += `<div class="ev" data-i="${i}">
       <span class="dot ${t.cls}"></span>
-      <div class="ev-date">${e.date}</div>
+      <div class="ev-date">${e.date}${e.solar ? ` <small>· 양력 ${e.solar}</small>` : ''}</div>
       <div class="ev-title">${e.title}</div>
       <div class="ev-tags"><span class="tag">${t.name}</span>${res}${e.battle ? '<span class="tag battle">⚔ 전투 재생</span>' : ''}</div>
     </div>`;
@@ -160,6 +160,7 @@ function select(i, opts = {}) {
   renderPulse(e);
   renderEventCard(e);
   renderPanel(i);
+  setHash(`#${e.id}`);
 
   App.map.flyTo(llOf(e.place), e.place === 'tsushima' ? 7 : 7.25, { duration: 0.9 });
   if (opts.playBattle && e.battle) setTimeout(() => startBattle(e), 300);
@@ -237,12 +238,13 @@ function renderEventCard(e) {
   card.classList.remove('hidden');
   card.style.animation = 'none'; void card.offsetWidth; card.style.animation = '';
   card.innerHTML = `
-    <div class="ec-head"><h2>${e.title}</h2><span class="ec-date">${e.date} · ${placeName(e)}</span>
+    <div class="ec-head"><h2>${e.title}</h2><span class="ec-date">${e.date}${e.solar ? ` (양력 ${e.solar})` : ''} · ${placeName(e)}</span>
       <button class="btn collapse" id="ecMin" title="접기/펼치기">${card.classList.contains('min') ? '펼치기' : '접기'}</button></div>
-    <p>${e.desc}</p>
-    <div class="ec-actions">${e.battle ? '<button class="btn primary" id="ecBattle">⚔ 전투 전개 보기</button>' : ''}${
+    <p>${markTerms(e.desc)}</p>
+    <div class="ec-actions"><button class="btn" id="ecLink" title="이 사건을 바로 여는 주소를 복사">🔗 링크 복사</button>${e.battle ? '<button class="btn primary" id="ecBattle">⚔ 전투 전개 보기</button>' : ''}${
       ['e33', 'postwar'].includes(e.id) ? '<button class="btn primary" id="ecResults">📜 전쟁의 결과 보기</button>' : ''}</div>`;
   document.getElementById('ecResults')?.addEventListener('click', showResults);
+  document.getElementById('ecLink').onclick = () => copyLink(`#${e.id}`);
   document.getElementById('ecMin').onclick = () => {
     card.classList.toggle('min');
     document.getElementById('ecMin').textContent = card.classList.contains('min') ? '펼치기' : '접기';
@@ -306,7 +308,7 @@ function renderPanel(i) {
       ${e.n.m ? `<div class="note">● ${e.n.m}</div>` : ''}
     </div>
     <h3>역사적 의의</h3>
-    <div class="card meaning">${e.meaning}</div>
+    <div class="card meaning">${markTerms(e.meaning)}</div>
     ${sourcesCard(e)}
     <p class="disclaimer">※ 날짜는 음력 기준입니다. 병력·함선·군량·사기 수치는 사료와 연구마다 차이가 큰 추정치를 교육용으로 단순화한 값입니다. 지도의 세력 범위는 주요 고을 기준의 개략적인 표시입니다.</p>`;
   document.getElementById('panel').innerHTML = html;
@@ -462,8 +464,140 @@ function startBattle(e) {
   document.getElementById('map').classList.add('battle');
   const b = BATTLES[e.battle];
   b.past = PAST_TERRAIN[e.battle];
+  b.why = WHY[e.battle];
+  b.link = `#${e.id}/battle`;
   Battle.start(b, App.map, endBattle);
   Terrain.show(b.past);
+  setHash(b.link);
+}
+
+// ── 공유 링크: 주소 끝 #사건id (전투는 #사건id/battle)
+function setHash(h) {
+  try { history.replaceState(null, '', h); } catch (e) { /* file:// 등에서는 무시 */ }
+}
+function openFromHash() {
+  const [id, mode] = decodeURIComponent(location.hash.slice(1)).split('/');
+  const i = EVENTS.findIndex((e) => e.id === id);
+  if (i < 0) return false;
+  select(i, { playBattle: mode === 'battle' });
+  return true;
+}
+function copyLink(hash) {
+  const url = location.href.split('#')[0] + hash;
+  const done = () => toast('링크를 복사했습니다. 수업 자료에 붙여 넣으세요.');
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(done, () => window.prompt('아래 주소를 복사하세요', url));
+  else window.prompt('아래 주소를 복사하세요', url);
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── 용어 풀이
+const TERMS = GLOSSARY.filter((g) => g.auto !== false).sort((a, b) => b.t.length - a.t.length);
+function markTerms(text) {
+  if (!text) return '';
+  const slots = [];
+  let s = String(text);
+  for (const g of TERMS) {
+    const i = s.indexOf(g.t);
+    if (i < 0) continue;
+    s = s.slice(0, i) + `\u0003${slots.length}\u0004` + s.slice(i + g.t.length);
+    slots.push(`<span class="term${g.codex ? ' cx-term' : ''}" data-term="${g.t}">${g.t}</span>`);
+  }
+  return s.replace(/\u0003(\d+)\u0004/g, (_, k) => slots[+k]);
+}
+function buildGlossary() {
+  const q = document.getElementById('glossSearch').value.trim();
+  const list = [...GLOSSARY].sort((a, b) => a.t.localeCompare(b.t, 'ko'))
+    .filter((g) => !q || (g.t + g.h + g.d).includes(q));
+  document.getElementById('glossList').innerHTML = list.map((g) => `<div class="gloss">
+    <div class="gt">${g.t} <small>${g.h}</small>${g.codex ? ` <button class="mini" data-cx-open="${g.codex}">도감 보기</button>` : ''}</div>
+    <div class="gd">${g.d}</div></div>`).join('') || '<p style="padding:14px;color:var(--muted)">찾는 용어가 없습니다.</p>';
+}
+function initTermTip() {
+  const tip = document.getElementById('termTip');
+  const show = (el) => {
+    const g = GLOSSARY.find((x) => x.t === el.dataset.term);
+    if (!g) return;
+    tip.innerHTML = `<b>${g.t}</b> <small>${g.h}</small><div>${g.d}</div>${g.codex ? '<em>누르면 무기·전술 도감이 열립니다</em>' : ''}`;
+    tip.classList.add('show');
+    const r = el.getBoundingClientRect();
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2))}px`;
+    tip.style.top = `${r.top - h - 8 < 8 ? r.bottom + 8 : r.top - h - 8}px`;
+  };
+  document.addEventListener('mouseover', (ev) => { const el = ev.target.closest('.term'); if (el) show(el); });
+  document.addEventListener('mouseout', (ev) => { if (ev.target.closest('.term')) tip.classList.remove('show'); });
+  document.addEventListener('click', (ev) => {
+    const el = ev.target.closest('.term');
+    if (!el) return;
+    const g = GLOSSARY.find((x) => x.t === el.dataset.term);
+    if (g?.codex) { tip.classList.remove('show'); if (App.mode === 'battle' && Battle.playing) Battle.toggle(); showCodex(g.codex); } else show(el);
+  });
+}
+
+// ── 퀴즈
+const Quiz = { list: [], k: 0, score: 0, group: 'all' };
+function showQuizMenu() {
+  openModal('퀴즈', `<p>묶음을 골라 5문제를 풀어 보세요. 문제마다 해설과 관련 사건 바로가기가 나옵니다.</p>
+    <div class="quiz-groups">${Object.entries(QUIZ_GROUPS).map(([g, name]) => {
+      const n = g === 'all' ? QUIZ.length : QUIZ.filter((q) => q.g === g).length;
+      return `<button class="btn" data-quiz="${g}">${name} <small>(${n}문제)</small></button>`;
+    }).join('')}</div>`);
+}
+function startQuiz(group) {
+  const pool = QUIZ.filter((q) => group === 'all' || q.g === group);
+  Quiz.list = pool.map((q) => ({ q, r: Math.random() })).sort((a, b) => a.r - b.r).slice(0, 5).map((x) => x.q);
+  Quiz.k = 0; Quiz.score = 0; Quiz.group = group;
+  renderQuiz();
+}
+function renderQuiz(answered = null) {
+  const q = Quiz.list[Quiz.k];
+  const body = document.getElementById('modalBody');
+  if (!q) {
+    openModal('퀴즈 결과', `<div class="quiz-score">${Quiz.list.length}문제 가운데 <b>${Quiz.score}</b>문제를 맞혔습니다.</div>
+      <div class="quiz-groups"><button class="btn primary" data-quiz="${Quiz.group}">다시 풀기</button><button class="btn" data-quiz-menu="1">다른 묶음 고르기</button></div>`);
+    return;
+  }
+  const ev = q.ev ? EVENTS.findIndex((e) => e.id === q.ev) : -1;
+  document.getElementById('modalTitle').textContent = `퀴즈 ${Quiz.k + 1} / ${Quiz.list.length}`;
+  body.innerHTML = `<div class="quiz-q">${q.q}</div>
+    <div class="quiz-choices">${q.c.map((c, i) => {
+      let cls = '';
+      if (answered !== null) cls = i === q.a ? 'right' : i === answered ? 'wrong' : 'dim';
+      return `<button class="quiz-c ${cls}" data-choice="${i}" ${answered !== null ? 'disabled' : ''}>${i + 1}. ${c}</button>`;
+    }).join('')}</div>
+    ${answered !== null ? `<div class="quiz-x ${answered === q.a ? 'ok' : 'no'}"><b>${answered === q.a ? '정답입니다!' : `아쉬워요. 정답은 ${q.a + 1}번입니다.`}</b><p>${q.x}</p>
+      <div class="quiz-groups">${ev >= 0 ? `<button class="btn" data-quiz-ev="${ev}">관련 사건 보기</button>` : ''}<button class="btn primary" data-quiz-next="1">${Quiz.k + 1 < Quiz.list.length ? '다음 문제 ▶' : '결과 보기'}</button></div></div>` : ''}`;
+}
+function initQuiz() {
+  document.getElementById('modalBody').addEventListener('click', (ev) => {
+    const g = ev.target.closest('[data-quiz]');
+    if (g) { startQuiz(g.dataset.quiz); return; }
+    if (ev.target.closest('[data-quiz-menu]')) { showQuizMenu(); return; }
+    const c = ev.target.closest('[data-choice]');
+    if (c && !c.disabled) {
+      const a = +c.dataset.choice;
+      if (a === Quiz.list[Quiz.k].a) Quiz.score++;
+      renderQuiz(a);
+      return;
+    }
+    if (ev.target.closest('[data-quiz-next]')) { Quiz.k++; renderQuiz(); return; }
+    const e = ev.target.closest('[data-quiz-ev]');
+    if (e) { closeModal(); stopAuto(); setTab('timeline'); select(+e.dataset.quizEv); }
+    const cx = ev.target.closest('[data-cx-open]');
+    if (cx) showCodex(cx.dataset.cxOpen);
+  });
+}
+
+// ── 소개
+function showIntro() {
+  openModal('임진왜란 · 정유재란 (1592 ~ 1598)', INTRO_HTML);
+  try { localStorage.setItem('imjin_intro_seen', '1'); } catch (e) { /* 저장소를 못 쓰면 무시 */ }
 }
 
 function restoreStrategic() {
@@ -553,5 +687,28 @@ document.addEventListener('DOMContentLoaded', () => {
     if (ev.key === 'ArrowDown') { ev.preventDefault(); stopAuto(); select(App.idx + 1); }
     if (ev.key === 'ArrowUp') { ev.preventDefault(); stopAuto(); select(App.idx - 1); }
   });
-  select(0);
+
+  // 수업용 기능
+  document.getElementById('btnQuiz').onclick = showQuizMenu;
+  document.getElementById('btnIntro').onclick = showIntro;
+  document.getElementById('bLink').onclick = () => copyLink(location.hash || '');
+  document.getElementById('glossSearch').addEventListener('input', buildGlossary);
+  document.addEventListener('click', (ev) => {
+    const cx = ev.target.closest('[data-cx-open]');
+    if (cx) showCodex(cx.dataset.cxOpen);
+  });
+  buildGlossary();
+  initTermTip();
+  initQuiz();
+  window.addEventListener('hashchange', () => {
+    const id = location.hash.slice(1).split('/')[0];
+    if (EVENTS[App.idx]?.id !== id || location.hash.endsWith('/battle') !== (App.mode === 'battle')) openFromHash();
+  });
+
+  if (!openFromHash()) {
+    select(0);
+    let seen = false;
+    try { seen = localStorage.getItem('imjin_intro_seen') === '1'; } catch (e) { /* 저장소를 못 쓰면 매번 보여 줌 */ }
+    if (!seen) showIntro();
+  }
 });

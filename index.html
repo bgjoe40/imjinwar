@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="css/style.css?v=8">
+  <link rel="stylesheet" href="css/style.css?v=10">
 </head>
 <body>
   <header class="topbar">
@@ -25,8 +25,11 @@
       <button id="btnPrev" class="btn" title="이전 사건 (↑)">◀ 이전</button>
       <button id="btnAuto" class="btn" title="연대기 자동 재생">▶ 연대기 재생</button>
       <button id="btnNext" class="btn" title="다음 사건 (↓)">다음 ▶</button>
-      <button id="btnResults" class="btn" title="전쟁이 남긴 결과">📜 결과</button>
-      <button id="btnSources" class="btn" title="사료와 참고 자료">📖 자료</button>
+      <span class="top-sep"></span>
+      <button id="btnQuiz" class="btn" title="퀴즈로 복습하기">❓<span class="tx"> 퀴즈</span></button>
+      <button id="btnResults" class="btn" title="전쟁이 남긴 결과">📜<span class="tx"> 결과</span></button>
+      <button id="btnSources" class="btn" title="사료와 참고 자료">📖<span class="tx"> 자료</span></button>
+      <button id="btnIntro" class="btn" title="이 전쟁과 프로그램 소개">ⓘ<span class="tx"> 소개</span></button>
     </div>
   </header>
 
@@ -36,6 +39,7 @@
         <button data-tab="timeline" class="on" role="tab">연대기</button>
         <button data-tab="people" role="tab">인물</button>
         <button data-tab="codex" role="tab">무기·전술</button>
+        <button data-tab="gloss" role="tab">용어</button>
       </div>
       <div class="side-pane" id="pane-timeline">
         <div class="sidebar-head">
@@ -50,6 +54,10 @@
       </div>
       <div class="side-pane hidden" id="pane-codex">
         <div id="codexList" class="item-list"></div>
+      </div>
+      <div class="side-pane hidden" id="pane-gloss">
+        <div class="side-search"><input id="glossSearch" type="search" placeholder="용어 검색 (예: 의병, 장계)"></div>
+        <div id="glossList" class="item-list"></div>
       </div>
     </aside>
 
@@ -102,6 +110,7 @@
             <option value="2">2×</option>
             <option value="4">4×</option>
           </select>
+          <button class="btn icon" id="bLink" title="이 전투를 바로 여는 주소 복사">🔗</button>
           <button class="btn" id="bExit">전략 지도로 ✕</button>
         </div>
       </div>
@@ -118,18 +127,21 @@
       <div class="modal-body" id="modalBody"></div>
     </div>
   </div>
+  <div class="term-tip" id="termTip" role="tooltip"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="js/data-events.js?v=8"></script>
-  <script src="js/data-battles.js?v=8"></script>
-  <script src="js/data-terrain.js?v=8"></script>
-  <script src="js/data-sources.js?v=8"></script>
-  <script src="js/data-people.js?v=8"></script>
-  <script src="js/data-codex.js?v=8"></script>
-  <script src="js/data-mapextra.js?v=8"></script>
-  <script src="js/data-results.js?v=8"></script>
-  <script src="js/terrain.js?v=8"></script>
-  <script src="js/battle.js?v=8"></script>
-  <script src="js/app.js?v=8"></script>
+  <script src="js/data-events.js?v=10"></script>
+  <script src="js/data-battles.js?v=10"></script>
+  <script src="js/data-terrain.js?v=10"></script>
+  <script src="js/data-sources.js?v=10"></script>
+  <script src="js/data-people.js?v=10"></script>
+  <script src="js/data-codex.js?v=10"></script>
+  <script src="js/data-mapextra.js?v=10"></script>
+  <script src="js/data-results.js?v=10"></script>
+  <script src="js/data-learn.js?v=10"></script>
+  <script src="js/terrain.js?v=10"></script>
+  <script src="js/battle.js?v=10"></script>
+  <script src="js/app.js?v=10"></script>
 </body>
 </html>

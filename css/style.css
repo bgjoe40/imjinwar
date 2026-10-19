@@ -68,6 +68,52 @@ button, select { font-family: inherit; }
 .rel-list button:hover { border-color: var(--gold); }
 .rel-list button span { color: var(--gold); margin-right: 8px; font-size: 11.5px; }
 
+/* 상단 버튼 묶음 */
+.top-sep { width: 1px; background: var(--line); margin: 4px 2px; }
+@media (max-width: 1250px) { .top-controls .tx { display: none; } }
+
+/* 용어 풀이 */
+.term { border-bottom: 1px dotted rgba(236, 230, 216, .7); cursor: help; }
+.term.cx-term { border-bottom-color: #f0d79a; cursor: pointer; }
+.term-tip { position: fixed; z-index: 3000; max-width: 300px; background: #f4ead2; color: #2b1d10; border: 1px solid #a88a55; border-radius: 8px;
+  padding: 8px 10px; font-size: 12.5px; line-height: 1.55; box-shadow: 0 8px 20px rgba(0,0,0,.45); pointer-events: none; opacity: 0; transition: opacity .12s; }
+.term-tip.show { opacity: 1; }
+.term-tip b { font-family: var(--serif); }
+.term-tip small { color: #7a5a36; }
+.term-tip em { display: block; margin-top: 4px; color: #8a5a2b; font-style: normal; font-size: 11.5px; }
+.gloss { padding: 9px 14px; border-bottom: 1px dashed #2c323e; }
+.gloss .gt { font-weight: 700; font-size: 13.5px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.gloss .gt small { color: var(--muted); font-weight: 400; }
+.gloss .gd { font-size: 12.5px; color: #cfc9bb; margin-top: 3px; line-height: 1.55; }
+.mini { font: inherit; font-size: 11px; padding: 1px 7px; border-radius: 10px; border: 1px solid #4a4231; background: #262116; color: #e9d9b0; cursor: pointer; }
+
+/* 승패의 이유 */
+.card.why { display: grid; gap: 6px; font-size: 12.5px; line-height: 1.5; }
+.card.why div { display: grid; grid-template-columns: 62px 1fr; gap: 8px; }
+.card.why b { color: var(--gold); font-weight: 700; }
+
+/* 퀴즈 */
+.quiz-groups { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.quiz-groups small { color: var(--muted); }
+.quiz-q { font-family: var(--serif); font-size: 17px; font-weight: 700; line-height: 1.5; margin: 4px 0 12px; }
+.quiz-choices { display: grid; gap: 6px; }
+.quiz-c { text-align: left; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; color: var(--text); padding: 10px 12px; font: inherit; font-size: 14px; cursor: pointer; }
+.quiz-c:not([disabled]):hover { border-color: var(--gold); }
+.quiz-c.right { border-color: #22c55e; background: #12301e; }
+.quiz-c.wrong { border-color: #ef4444; background: #3a1414; }
+.quiz-c.dim { opacity: .55; }
+.quiz-x { margin-top: 12px; padding: 10px 12px; border-radius: 8px; border-left: 4px solid; }
+.quiz-x.ok { border-color: #22c55e; background: #12261b; }
+.quiz-x.no { border-color: #ef4444; background: #2a1515; }
+.quiz-x p { margin: 4px 0 0; }
+.quiz-score { font-family: var(--serif); font-size: 18px; text-align: center; padding: 18px 0; }
+.quiz-score b { color: var(--gold); font-size: 28px; }
+
+/* 알림 */
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); z-index: 3000; background: #f4ead2; color: #2b1d10; border-radius: 20px;
+  padding: 8px 16px; font-size: 13px; font-weight: 500; box-shadow: 0 6px 18px rgba(0,0,0,.4); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
 /* 전쟁의 결과 */
 .res-chart { display: grid; gap: 8px; margin: 6px 0 4px; }
 .res-row { display: grid; grid-template-columns: 120px 1fr 110px; gap: 10px; align-items: center; font-size: 13px; }
@@ -320,7 +366,11 @@ button, select { font-family: inherit; }
   .layout { grid-template-columns: 1fr; height: auto; }
   .sidebar { max-height: 260px; }
   .center { height: 70vh; }
-  .top-controls .btn { padding: 6px 8px; }
+  .topbar { height: auto; flex-wrap: wrap; gap: 6px; padding: 8px 10px; }
+  .brand h1 { font-size: 15px; white-space: nowrap; }
+  .top-controls { width: 100%; flex-wrap: wrap; gap: 4px; justify-content: space-between; }
+  .top-controls .btn { padding: 5px 7px; font-size: 12px; }
+  .top-sep { display: none; }
   .brand p { display: none; }
   /* 좁은 화면에서는 전투 제목 배너가 [지형] 버튼을 가리므로 숨긴다 (제목은 오른쪽 패널과 해설에 표시) */
   .battle-banner { display: none; }

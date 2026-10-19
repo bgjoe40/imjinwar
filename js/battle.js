@@ -176,7 +176,7 @@ const Battle = (() => {
     $('narrTitle').textContent = ph.title;
     $('narrStep').textContent = `${k + 1} / ${B.phases.length} 단계`;
     const tx = $('narrText');
-    tx.textContent = ph.text;
+    tx.innerHTML = markTerms(ph.text);
     tx.classList.remove('fade'); void tx.offsetWidth; tx.classList.add('fade');
     const q = $('narrQuote');
     q.classList.toggle('hidden', !ph.quote);
@@ -213,6 +213,7 @@ const Battle = (() => {
     $('panel').innerHTML = `
       <h3>⚔ ${B.title} <small>${B.date}</small></h3>
       <div class="card bt-result" id="btResult">전투 진행 중…</div>
+      ${B.why ? `<h3>승패의 이유 <small>왜 이기고 졌을까?</small></h3><div class="card why">${B.why.map(([k, v]) => `<div><b>${k}</b><span>${v}</span></div>`).join('')}</div>` : ''}
       <h3>전력 비교 <small>${naval ? '함선 수' : '병력'}</small></h3>
       <div class="card" id="btForces">${facs.map((f) => `<div class="force-row" data-f="${f}" style="--c:${FACTIONS[f].color}">
         <span><b style="color:${FACTIONS[f].color}">■</b> ${FACTIONS[f].name}</span><span class="val"></span><div class="bar"><div></div></div></div>`).join('')}</div>
@@ -350,7 +351,7 @@ const Battle = (() => {
     $('scrubTicks').innerHTML = starts.slice(1).map((s) => `<i style="left:${(s / total) * 100}%"></i>`).join('');
     $('battleHud').classList.remove('hidden');
     const bn = $('battleBanner');
-    bn.innerHTML = `${B.title}<small>${B.date}</small>`;
+    bn.innerHTML = `${B.title}<small>${B.date}${B.solar ? ` · 양력 ${B.solar}` : ''}</small>`;
     bn.classList.remove('hidden');
     bindControls();
     t = 0; curPhase = -1; ended = false; lastTs = 0; speed = +$('bSpeed').value;
