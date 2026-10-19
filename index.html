@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=4">
 </head>
 <body>
   <header class="topbar">
@@ -25,6 +25,7 @@
       <button id="btnPrev" class="btn" title="이전 사건 (↑)">◀ 이전</button>
       <button id="btnAuto" class="btn" title="연대기 자동 재생">▶ 연대기 재생</button>
       <button id="btnNext" class="btn" title="다음 사건 (↓)">다음 ▶</button>
+      <button id="btnSources" class="btn" title="사료와 참고 자료">📖 자료</button>
     </div>
   </header>
 
@@ -96,12 +97,20 @@
     <aside class="panel" id="panel"></aside>
   </main>
 
+  <div class="modal hidden" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-box">
+      <div class="modal-head"><h2 id="modalTitle"></h2><button class="btn" id="modalClose">닫기 ✕</button></div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="js/data-events.js"></script>
-  <script src="js/data-battles.js"></script>
-  <script src="js/data-terrain.js"></script>
-  <script src="js/terrain.js"></script>
-  <script src="js/battle.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/data-events.js?v=4"></script>
+  <script src="js/data-battles.js?v=4"></script>
+  <script src="js/data-terrain.js?v=4"></script>
+  <script src="js/data-sources.js?v=4"></script>
+  <script src="js/terrain.js?v=4"></script>
+  <script src="js/battle.js?v=4"></script>
+  <script src="js/app.js?v=4"></script>
 </body>
 </html>

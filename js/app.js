@@ -264,8 +264,42 @@ function renderPanel(i) {
     </div>
     <h3>역사적 의의</h3>
     <div class="card meaning">${e.meaning}</div>
+    ${sourcesCard(e)}
     <p class="disclaimer">※ 날짜는 음력 기준입니다. 병력·함선·군량·사기 수치는 사료와 연구마다 차이가 큰 추정치를 교육용으로 단순화한 값입니다. 지도의 세력 범위는 주요 고을 기준의 개략적인 표시입니다.</p>`;
   document.getElementById('panel').innerHTML = html;
+}
+
+// ── 근거 자료
+function sourcesCard(e) {
+  if (!e.src?.length && !e.range) return '';
+  const chips = (e.src || []).map((t) => {
+    const s = findSource(t);
+    return s ? `<button class="src-chip" data-src="${s.key}" title="${s.title}">${t}</button>` : `<span class="src-chip plain">${t}</span>`;
+  }).join('');
+  return `<h3>근거 자료 <small>사료를 누르면 설명이 열립니다</small></h3>
+    <div class="card sources"><div class="src-chips">${chips}</div>
+    ${e.range ? `<div class="range"><b>수치 범위</b> ${e.range}</div>` : ''}</div>`;
+}
+
+// ── 창 (모달)
+function openModal(title, html) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('modal').classList.remove('hidden');
+  document.getElementById('modalBody').scrollTop = 0;
+}
+function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+function showSources(key) {
+  openModal('참고 자료 · 사료 안내', `
+    <p>이 프로그램의 사건 설명과 수치는 아래 사료와 연구에 기록된 내용을 바탕으로 교육용으로 다시 정리한 것입니다.
+    사료마다 쓴 사람의 처지와 시각이 다르고 숫자도 서로 다를 때가 많으니, 여러 기록을 견주어 읽어 보세요.</p>
+    ${SOURCES.map((s) => `<div class="src-item" data-key="${s.key}">
+      <div class="st">${s.title}</div><div class="sm">${s.kind} · ${s.who} · ${s.when}</div><p>${s.desc}</p></div>`).join('')}`);
+  if (key) {
+    const el = document.querySelector(`.src-item[data-key="${key}"]`);
+    if (el) { el.classList.add('hl'); el.scrollIntoView({ block: 'center' }); }
+  }
 }
 
 // ── 전투 모드 전환
@@ -325,12 +359,23 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnPrev').onclick = () => { stopAuto(); select(App.idx - 1); };
   document.getElementById('btnNext').onclick = () => { stopAuto(); select(App.idx + 1); };
   document.getElementById('btnAuto').onclick = toggleAuto;
+  document.getElementById('btnSources').onclick = () => showSources();
+  document.getElementById('modalClose').onclick = closeModal;
+  document.getElementById('modal').addEventListener('click', (ev) => { if (ev.target.id === 'modal') closeModal(); });
+  document.getElementById('panel').addEventListener('click', (ev) => {
+    const chip = ev.target.closest('.src-chip[data-src]');
+    if (chip) showSources(chip.dataset.src);
+  });
   document.getElementById('terrainSwitch').onclick = (ev) => {
     const b = ev.target.closest('button');
     if (b) Terrain.setMode(b.dataset.mode);
   };
   document.addEventListener('keydown', (ev) => {
     if (ev.target.tagName === 'SELECT') return;
+    if (!document.getElementById('modal').classList.contains('hidden')) {
+      if (ev.key === 'Escape') closeModal();
+      return;
+    }
     if (App.mode === 'battle') {
       if (ev.code === 'Space') { ev.preventDefault(); Battle.toggle(); }
       if (ev.key === 'Escape') Battle.stop(false);
