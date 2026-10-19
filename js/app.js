@@ -9,6 +9,8 @@ const TYPE_INFO = {
 
 const fmt = (n) => n.toLocaleString('ko-KR');
 const llOf = (p) => (Array.isArray(p) ? p : PLACES[p].ll);
+// 사건 장소: 거점 id 또는 [위도, 경도] + placeName
+const placeName = (e) => (Array.isArray(e.place) ? e.placeName : PLACES[e.place].name);
 
 const App = {
   idx: -1,
@@ -194,7 +196,7 @@ function renderEventCard(e) {
   card.classList.remove('hidden');
   card.style.animation = 'none'; void card.offsetWidth; card.style.animation = '';
   card.innerHTML = `
-    <div class="ec-head"><h2>${e.title}</h2><span class="ec-date">${e.date} · ${PLACES[e.place].name}</span>
+    <div class="ec-head"><h2>${e.title}</h2><span class="ec-date">${e.date} · ${placeName(e)}</span>
       <button class="btn collapse" id="ecMin" title="접기/펼치기">${card.classList.contains('min') ? '펼치기' : '접기'}</button></div>
     <p>${e.desc}</p>
     <div class="ec-actions">${e.battle ? '<button class="btn primary" id="ecBattle">⚔ 전투 전개 보기</button>' : ''}</div>`;
