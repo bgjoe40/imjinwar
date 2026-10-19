@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="css/style.css?v=5">
+  <link rel="stylesheet" href="css/style.css?v=6">
 </head>
 <body>
   <header class="topbar">
@@ -34,6 +34,7 @@
       <div class="side-tabs" id="sideTabs" role="tablist">
         <button data-tab="timeline" class="on" role="tab">연대기</button>
         <button data-tab="people" role="tab">인물</button>
+        <button data-tab="codex" role="tab">무기·전술</button>
       </div>
       <div class="side-pane" id="pane-timeline">
         <div class="sidebar-head">
@@ -45,6 +46,9 @@
       <div class="side-pane hidden" id="pane-people">
         <div class="side-search"><input id="peopleSearch" type="search" placeholder="이름·직책 검색 (예: 이순신, 의병장)"></div>
         <div id="peopleList" class="item-list"></div>
+      </div>
+      <div class="side-pane hidden" id="pane-codex">
+        <div id="codexList" class="item-list"></div>
       </div>
     </aside>
 
@@ -115,13 +119,14 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="js/data-events.js?v=5"></script>
-  <script src="js/data-battles.js?v=5"></script>
-  <script src="js/data-terrain.js?v=5"></script>
-  <script src="js/data-sources.js?v=5"></script>
-  <script src="js/data-people.js?v=5"></script>
-  <script src="js/terrain.js?v=5"></script>
-  <script src="js/battle.js?v=5"></script>
-  <script src="js/app.js?v=5"></script>
+  <script src="js/data-events.js?v=6"></script>
+  <script src="js/data-battles.js?v=6"></script>
+  <script src="js/data-terrain.js?v=6"></script>
+  <script src="js/data-sources.js?v=6"></script>
+  <script src="js/data-people.js?v=6"></script>
+  <script src="js/data-codex.js?v=6"></script>
+  <script src="js/terrain.js?v=6"></script>
+  <script src="js/battle.js?v=6"></script>
+  <script src="js/app.js?v=6"></script>
 </body>
 </html>

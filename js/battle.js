@@ -219,7 +219,8 @@ const Battle = (() => {
       <h3>부대 현황</h3>
       <div class="card unit-list" id="btUnits">${ids.filter((id) => B.units[id].s).map((id) => {
         const u = B.units[id];
-        return `<div class="unit-item" data-id="${id}" style="--c:${FACTIONS[u.f].color}">${svgIcon(u)}
+        const cx = codexFor(u, naval);
+        return `<div class="unit-item" data-id="${id}" style="--c:${FACTIONS[u.f].color}"><button class="u-ico" ${cx ? `data-codex="${cx}" title="무기·전술 도감에서 보기"` : 'disabled'}>${svgIcon(u)}</button>
           <span class="u-name">${u.n}${u.cmd ? `<small>${linkNames(u.cmd)}</small>` : ''}</span><span class="val"></span></div>`;
       }).join('')}</div>
       <h3>전개 단계</h3>
@@ -377,5 +378,5 @@ const Battle = (() => {
     if (!silent && onExit) onExit();
   }
 
-  return { start, stop, toggle, step, get active() { return !!B; } };
+  return { start, stop, toggle, step, get active() { return !!B; }, get playing() { return playing; } };
 })();

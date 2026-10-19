@@ -338,6 +338,30 @@ function showPerson(id) {
     ${relatedEventsHtml(rel)}`);
 }
 
+// ── 무기·전술 도감
+function buildCodex() {
+  document.getElementById('codexList').innerHTML = Object.entries(CODEX_CATS).map(([cat, name]) => {
+    const list = CODEX.filter((c) => c.cat === cat);
+    return `<div class="item-group">${name} <small>${list.length}</small></div>` + list.map((c) =>
+      `<button class="item cx" data-cx="${c.id}"><span class="cx-thumb">${c.svg}</span>
+        <span><div class="in">${c.name}<small>${c.hanja}</small></div><div class="ir">${FACTIONS[c.side].name}</div></span></button>`).join('');
+  }).join('');
+}
+
+function showCodex(id) {
+  const c = CODEX.find((x) => x.id === id);
+  if (!c) return;
+  const evs = c.battles.map((b) => EVENTS.findIndex((e) => e.battle === b)).filter((i) => i >= 0).sort((a, b) => a - b);
+  openModal(c.name, `
+    <div class="cx-big">${c.svg}</div>
+    <div class="p-meta" style="margin-bottom:6px"><b>${CODEX_CATS[c.cat]}</b> · ${FACTIONS[c.side].name} · ${c.hanja}</div>
+    <p>${c.text}</p>
+    <ul class="cx-facts">${c.facts.map((f) => `<li>${f}</li>`).join('')}</ul>
+    ${evs.length ? `<h3>이 무기·전술이 쓰인 전투</h3><div class="rel-list">${evs.map((i) =>
+      `<button data-ev="${i}" data-play="1"><span>${EVENTS[i].date}</span>⚔ ${EVENTS[i].title}</button>`).join('')}</div>` : ''}
+    <p class="disclaimer" style="margin-top:12px">※ 그림은 이해를 돕기 위한 단순한 모형으로, 실제 모습과 다를 수 있습니다.</p>`);
+}
+
 function setTab(tab) {
   document.querySelectorAll('#sideTabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
   document.querySelectorAll('.side-pane').forEach((p) => p.classList.toggle('hidden', p.id !== `pane-${tab}`));
@@ -432,8 +456,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('click', (ev) => {
     const p = ev.target.closest('.person-link, #peopleList .item[data-p]');
     if (p) { showPerson(p.dataset.p); return; }
+    const cx = ev.target.closest('#codexList .item[data-cx], .u-ico[data-codex]');
+    if (cx) { if (App.mode === 'battle' && Battle.playing) Battle.toggle(); showCodex(cx.dataset.cx || cx.dataset.codex); return; }
     const rel = ev.target.closest('.rel-list button[data-ev]');
-    if (rel) { closeModal(); stopAuto(); setTab('timeline'); select(+rel.dataset.ev); }
+    if (rel) { closeModal(); stopAuto(); setTab('timeline'); select(+rel.dataset.ev, { playBattle: !!rel.dataset.play }); }
   });
   document.getElementById('sideTabs').onclick = (ev) => {
     const b = ev.target.closest('button[data-tab]');
@@ -441,6 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   document.getElementById('peopleSearch').addEventListener('input', buildPeople);
   buildPeople();
+  buildCodex();
   document.getElementById('terrainSwitch').onclick = (ev) => {
     const b = ev.target.closest('button');
     if (b) Terrain.setMode(b.dataset.mode);
