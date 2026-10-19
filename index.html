@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>임진왜란 전쟁사 지도</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="seal">壬辰</span>
+      <div>
+        <h1>임진왜란 · 정유재란</h1>
+        <p>1592 – 1598 칠년 전쟁 연대기</p>
+      </div>
+    </div>
+    <div class="top-controls">
+      <button id="btnPrev" class="btn" title="이전 사건 (↑)">◀ 이전</button>
+      <button id="btnAuto" class="btn" title="연대기 자동 재생">▶ 연대기 재생</button>
+      <button id="btnNext" class="btn" title="다음 사건 (↓)">다음 ▶</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-head">
+        <span>주요 사건 · 전투</span>
+        <span class="legend-mini"><i class="t-land"></i>육전 <i class="t-sea"></i>해전 <i class="t-siege"></i>공성 <i class="t-event"></i>사건</span>
+      </div>
+      <div id="timeline" class="timeline"></div>
+    </aside>
+
+    <section class="center">
+      <div id="map"></div>
+
+      <div class="map-legend" id="mapLegend">
+        <div><i style="background:var(--joseon)"></i>조선 지배</div>
+        <div><i style="background:var(--japan)"></i>일본 점령</div>
+        <div><i class="line" style="background:var(--japan)"></i>일본군 진격로</div>
+        <div><i class="line" style="background:var(--ming)"></i>명군 진격로</div>
+      </div>
+
+      <div class="event-card" id="eventCard"></div>
+
+      <div class="battle-hud hidden" id="battleHud">
+        <div class="narr">
+          <div class="narr-head">
+            <span class="narr-time" id="narrTime"></span>
+            <span class="narr-title" id="narrTitle"></span>
+            <span class="narr-step" id="narrStep"></span>
+          </div>
+          <p class="narr-text" id="narrText"></p>
+          <blockquote class="narr-quote hidden" id="narrQuote"></blockquote>
+        </div>
+        <div class="controls">
+          <button class="btn icon" id="bRestart" title="처음부터">⏮</button>
+          <button class="btn icon" id="bPrevPh" title="이전 단계">⏪</button>
+          <button class="btn icon primary" id="bPlay" title="재생/일시정지 (Space)">▶</button>
+          <button class="btn icon" id="bNextPh" title="다음 단계">⏩</button>
+          <div class="scrub" id="scrub"><div class="scrub-fill" id="scrubFill"></div><div class="scrub-ticks" id="scrubTicks"></div></div>
+          <select id="bSpeed" class="btn" title="재생 속도">
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+          </select>
+          <button class="btn" id="bExit">전략 지도로 ✕</button>
+        </div>
+      </div>
+
+      <div class="battle-banner hidden" id="battleBanner"></div>
+    </section>
+
+    <aside class="panel" id="panel"></aside>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/data-events.js"></script>
+  <script src="js/data-battles.js"></script>
+  <script src="js/battle.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
