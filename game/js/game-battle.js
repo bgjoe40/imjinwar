@@ -27,7 +27,7 @@ const TB = (() => {
   };
   const WALL_DEF = { eup: { wall: 2.0, gate: 1.7 }, san: { wall: 2.3, gate: 1.9 }, wae: { wall: 2.7, gate: 2.2 } };
   const GENERIC = { joseon: '군관', japan: '아시가루 대장', ming: '유격장' };
-  const TRICKS = { fire: { name: '화공', rng: 2 }, conf: { name: '혼란', rng: 3 }, rally: { name: '고무', rng: 0 } };
+  const ROUGH = ['forest', 'hill', 'mount', 'village'];
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const R = Math.round;
   let TB_last = null;
@@ -198,7 +198,7 @@ const TB = (() => {
     const st = genStats(gen, fac);
     const name = gen ? GD.GENS[gen].name : GENERIC[fac] || '장수';
     const ch = gen ? GD.GENS[gen].ch : UT[type].glyph;
-    return { id: uid++, side, fac, gen, name, ch, type, n, n0: n, tr, mo, ...st, c: 0, r: 0, done: false, moved: false, cmdr: false, dead: false, rout: false, st: { conf: 0, fire: 0 }, fate: null };
+    return { id: uid++, side, fac, gen, name, ch, type, n, n0: n, tr, mo, ...st, c: 0, r: 0, done: false, moved: false, cmdr: false, dead: false, rout: false, st: { conf: 0, fire: 0 }, cd: {}, fate: null };
   }
   function landUnits(sp, side) {
     const gens = (sp.gens || []).filter(g => !GD.GENS[g].skills.includes('king')).slice(0, 6)
@@ -396,9 +396,9 @@ const TB = (() => {
     if (u.fac === 'joseon' && u.type === 'cannon' && Game.S && Game.S.reforms.hwapo) k *= 1.2;
     return k;
   }
-  function power(B, u, kind) {
+  function power(B, u, kind, mods) {
     const ut = UT[u.type];
-    const base = kind === 'ranged' ? ut.ratk : ut.atk;
+    const base = mods && mods.asCannon ? UT.cannon.ratk : kind === 'ranged' ? ut.ratk : ut.atk;
     const stat = kind === 'ranged' ? u.int : u.war;
     return u.n * (ut.per || 1) * base * (0.55 + u.lea / 200 + stat / 400) * (0.6 + u.tr / 250) * (0.6 + u.mo / 250) * skillK(u, kind, B);
   }
@@ -420,12 +420,12 @@ const TB = (() => {
     const dd = hd(h.c, h.r, e.c, e.r);
     const ut = UT[u.type];
     const opts = [];
-    if (ut.ratk > 0 && dd <= ut.rng && dd >= 1) opts.push('ranged');
+    if (ut.ratk > 0 && dd <= ut.rng && dd >= 1 && !(e.st.hide && dd > 1)) opts.push('ranged');
     if (dd === 1 && ut.atk > 0) opts.push('melee');
     if (opts.length < 2) return opts[0] || null;
     return dmgMen(B, u, e, 'ranged', true, h) >= dmgMen(B, u, e, 'melee', true, h) ? 'ranged' : 'melee';
   }
-  function dmgMen(B, a, d, kind, est, from) {
+  function dmgMen(B, a, d, kind, est, from, mods) {
     const ac = from ? from.c : a.c, ar = from ? from.r : a.r;
     let k = 0.055;
     const tt = B.grid[d.r][d.c].t;
@@ -446,11 +446,25 @@ const TB = (() => {
     if (a.side === B.castleSide && (T[at].castle || T[at].inside)) k *= 1.3;
     if (kind === 'ranged' && dd >= 3) k *= 0.85;
     // 성벽 너머 성안의 군사는 밖에서 잘 보이지 않는다
-    if (kind === 'ranged' && T[tt].inside && d.side === B.castleSide && !(T[B.grid[ar][ac].t].inside || T[B.grid[ar][ac].t].castle) && a.type !== 'cannon') k *= 0.4;
+    if (kind === 'ranged' && T[tt].inside && d.side === B.castleSide && !(T[B.grid[ar][ac].t].inside || T[B.grid[ar][ac].t].castle) && a.type !== 'cannon' && !(mods && mods.asCannon)) k *= 0.4;
     if (UT[d.type].fixed) k *= 0.6;
-    let men = k * power(B, a, kind) / defense(B, d);
+    let men = k * power(B, a, kind, mods) / defense(B, d) * actK(B, a, d, kind, mods);
     if (!est) men *= 0.88 + Math.random() * 0.24;
     return men;
+  }
+  // 전법과 태세가 피해에 주는 배율
+  function actK(B, a, d, kind, mods) {
+    let k = mods && mods.mult ? mods.mult : 1;
+    if (mods && mods.id === 'charge' && ['paddy', 'forest', 'mount', 'ford'].includes(B.grid[d.r][d.c].t)) k = 1;
+    if (kind === 'ranged' && a.st.rbuff) k *= a.st.rmul || 1;
+    if (kind === 'melee' && a.st.diehard) k *= 1.2;
+    if (a.st.baesu) k *= 1.3;
+    if (a.st.hide) k *= 1.8;
+    if (d.st.mark && d.st.markBy === a.side) k *= 1.3;
+    if (d.st.shield) k *= 0.6;
+    if (d.st.spearwall) k *= 0.75;
+    if (d.st.baesu) k *= 1.25;
+    return k;
   }
 
   // ── 행동
@@ -464,6 +478,8 @@ const TB = (() => {
     ev.push({ t: 'hit', from: by, to: u, kind, x, men: R(x * per) });
     const steady = ((B.castleSide === u.side && (T[B.grid[u.r][u.c].t].castle || T[B.grid[u.r][u.c].t].inside)) || UT[u.type].steady ? 0.7 : 1) * (u.lea >= 88 ? 0.75 : 1);
     u.mo = clamp(u.mo - ((x / Math.max(1, before)) * 90 + (by && by.type === 'gun' && kind === 'ranged' ? (UT.gun.shock || 0) : 0)) * steady, 0, 100);
+    const floor = u.st.baesu ? 45 : u.st.diehard ? 40 : 0;
+    if (floor && u.mo < floor) u.mo = floor;
     const minN = UT[u.type].sea ? 0.6 : 60;
     if (u.n < Math.max(minN, u.n0 * (UT[u.type].sea ? 0.04 : 0.05))) destroy(B, u, by, kind, ev);
     else if (!u.rout && u.mo < 18 && !UT[u.type].fixed) { u.rout = true; say(B, `${u.name} 부대가 무너져 달아납니다.`, 'bad-' + u.side); ev.push({ t: 'rout', u }); }
@@ -478,22 +494,41 @@ const TB = (() => {
     say(B, `${u.name} 부대가 궤멸했습니다.${u.fate === 'dead' ? ` ${u.name} 전사!` : u.fate === 'captive' ? ` ${u.name}이(가) 사로잡혔습니다.` : ''}`, 'bad-' + u.side);
     ev.push({ t: 'dead', u });
   }
-  function strike(B, a, d, kind, ev) {
-    const men = dmgMen(B, a, d, kind);
-    const verb = kind === 'melee' ? (UT[a.type].board && UT[d.type].sea ? '배에 올라 칼싸움' : a.type === 'turtle' ? '들이받기' : a.type === 'cav' ? '돌격' : '공격')
+  function strike(B, a, d, kind, ev, mods) {
+    const men = dmgMen(B, a, d, kind, false, null, mods);
+    if (a.st.hide) { a.st.hide = false; say(B, `${a.name} 부대가 숨어 있다가 들이쳤습니다!`, 'act-' + a.side); }
+    if (kind === 'melee' && d.st.hide) d.st.hide = false;
+    const verb = mods && mods.name ? mods.name + '!' : kind === 'melee' ? (UT[a.type].board && UT[d.type].sea ? '배에 올라 칼싸움' : a.type === 'turtle' ? '들이받기' : a.type === 'cav' ? '돌격' : '공격')
       : a.type === 'gun' ? '조총 사격' : a.type === 'bow' ? '활 사격' : ['cannon', 'panok', 'turtle', 'mship', 'fort'].includes(a.type) ? '포격' : '사격';
     applyLoss(B, d, men, a, kind, ev);
     say(B, `${a.name} 부대의 ${verb} → ${d.name} 부대 ${shipsWord(d, men / (UT[d.type].per || 1))} 손실`, 'act-' + a.side);
+    if (mods) {
+      if (mods.splash) for (const o of alive(B, d.side)) {
+        if (o === d || o.fixed || hd(o.c, o.r, d.c, d.r) !== 1) continue;
+        applyLoss(B, o, men * mods.splash, a, kind, ev);
+        if (!o.dead) o.mo = clamp(o.mo - (mods.morale || 0) / 2, 0, 100);
+      }
+      if (!d.dead) {
+        if (mods.morale) d.mo = clamp(d.mo - mods.morale, 0, 100);
+        if (mods.shock) d.mo = clamp(d.mo - (UT.gun.shock || 5) * (mods.shock - 1), 0, 100);
+        if (mods.burn && Math.random() < burnChance(B, d, mods.burn)) { d.st.fire = 2; say(B, `${d.name} 부대에 불이 붙었습니다.`, 'bad-' + d.side); }
+        if (!d.rout && d.mo < 18 && !UT[d.type].fixed) { d.rout = true; say(B, `${d.name} 부대가 무너져 달아납니다.`, 'bad-' + d.side); ev.push({ t: 'rout', u: d }); }
+      }
+    }
     if (kind === 'melee' && !d.dead && !d.rout && UT[d.type].atk > 0.3) {
-      const back = dmgMen(B, d, a, 'melee') * 0.45;
+      const back = dmgMen(B, d, a, 'melee') * 0.45 * (d.st.spearwall ? (a.type === 'cav' ? 2.2 : 1.5) : 1);
       applyLoss(B, a, back, d, 'melee', ev);
     }
     a.mo = clamp(a.mo + 2, 0, 100);
   }
-  function wallHit(B, u, c, r, ev) {
+  function wallHit(B, u, c, r, ev, mods) {
     const h = B.grid[r][c];
-    const kind = UT[u.type].ratk > 0 && UT[u.type].rng >= hd(u.c, u.r, c, r) ? 'ranged' : 'melee';
-    const dmg = power(B, u, kind) * 0.018 * (UT[u.type].wallK || 0.3) * (u.fac === 'joseon' && u.type === 'cannon' && Game.S && Game.S.reforms.hwapo ? 1.5 : 1) * (0.88 + Math.random() * 0.24);
+    const asC = mods && mods.asCannon;
+    const kind = asC || (UT[u.type].ratk > 0 && UT[u.type].rng >= hd(u.c, u.r, c, r)) ? 'ranged' : 'melee';
+    const wk = asC ? UT.cannon.wallK : (UT[u.type].wallK || 0.3);
+    const dmg = power(B, u, kind, mods) * 0.018 * wk * (mods && mods.wallMult || 1) * ((asC || u.type === 'cannon') && u.fac === 'joseon' && Game.S && Game.S.reforms.hwapo ? 1.5 : 1) * (0.88 + Math.random() * 0.24);
+    if (mods && mods.name) say(B, `${u.name} 부대의 ${mods.name}!`, 'act-' + u.side);
+    if (u.st.hide) u.st.hide = false;
     h.hp = Math.max(0, h.hp - dmg);
     ev.push({ t: 'wall', u, c, r, dmg });
     if (h.hp <= 0) {
@@ -504,10 +539,43 @@ const TB = (() => {
       fields(B);
     } else say(B, `${u.name} 부대가 ${h.t === 'gate' ? '성문' : '성벽'}을 공격합니다. (남은 내구 ${R(h.hp)})`, 'act-' + u.side);
   }
-  function trickOdds(B, u, tk, e) {
-    if (tk === 'rally') return 1;
-    let p = (tk === 'fire' ? 0.3 : 0.28) + (u.int - e.int) / 90;
-    if (tk === 'fire') {
+  // ── 전법
+  // 장수 고유 전법과 계략 (장수 정보 창에서도 쓴다)
+  function genActIds(g) {
+    const d = GD.GENS[g], tricks = [];
+    if (d.int >= 75 || d.skills.includes('trick')) tricks.push('fire');
+    if (d.int >= 80 || d.skills.includes('trick')) tricks.push('conf');
+    if (d.cha >= 75) tricks.push('rally');
+    return { sig: GD.GEN_ACTS[g] || [], tricks };
+  }
+  function actsOf(B, u) {
+    const list = [...(GD.TYPE_ACTS[u.type] || [])];
+    if (u.gen) { const g = genActIds(u.gen); for (const id of [...g.sig, ...g.tricks]) if (!list.includes(id)) list.push(id); }
+    return list.filter(id => {
+      const A = GD.ACTS[id];
+      if (A.where && A.where !== B.kind) return false;
+      if (A.castle && !(B.castle && u.side === B.castleSide)) return false;
+      if (A.kind === 'hit' && A.melee && UT[u.type].atk <= 0) return false;
+      return true;
+    });
+  }
+  const actReady = (B, u, id) => !(u.cd[id] > B.day);
+  const actWait = (B, u, id) => Math.max(0, (u.cd[id] || 0) - B.day);
+  function actRange(u, id) {
+    const A = GD.ACTS[id];
+    if (A.rng !== undefined) return A.rng;
+    return A.kind === 'hit' ? (A.ranged ? UT[u.type].rng : 1) : 0;
+  }
+  function burnChance(B, d, base) {
+    const t = B.grid[d.r][d.c].t;
+    const p = base + (t === 'forest' ? 0.15 : 0) + (B.kind === 'sea' && UT[d.type].board ? 0.15 : 0) - (['paddy', 'ford', 'shoal'].includes(t) ? 0.15 : 0);
+    return clamp(p, 0.05, 0.85);
+  }
+  // 화공·혼란·유인 매복이 먹힐 확률
+  function trickOdds(B, u, id, e) {
+    if (id === 'lure') return clamp(0.55 + (u.int - e.int) / 120, 0.2, 0.9);
+    let p = (id === 'fire' ? 0.3 : 0.28) + (u.int - e.int) / 90;
+    if (id === 'fire') {
       const t = B.grid[e.r][e.c].t;
       if (t === 'forest') p += 0.15;
       if (B.kind === 'sea') p += 0.12 + (UT[e.type].board ? 0.1 : 0);
@@ -516,43 +584,138 @@ const TB = (() => {
     if (u.skills.includes('trick')) p += 0.12;
     return clamp(p, 0.05, 0.9);
   }
-  function doTrick(B, u, tk, e, ev) {
-    const nm = TRICKS[tk].name;
-    u.trickDay = B.day;
-    if (tk === 'rally') {
-      const gain = 10 + R(u.cha / 10);
-      for (const o of [u, ...alive(B, u.side).filter(o => hd(o.c, o.r, u.c, u.r) === 1)]) {
-        o.mo = clamp(o.mo + (o === u ? gain : 8), 0, 100);
-        if (o.rout && o.mo >= 35) o.rout = false;
-      }
-      say(B, `${u.name}이(가) 군사를 북돋웠습니다. 사기가 오릅니다.`, 'act-' + u.side);
-      ev.push({ t: 'trick', u, tk, ok: true, to: u });
-      return;
-    }
-    const ok = Math.random() < trickOdds(B, u, tk, e);
-    if (!ok) { say(B, `${u.name}의 ${nm}이(가) 실패했습니다.`, 'act-' + u.side); ev.push({ t: 'trick', u, tk, ok: false, to: e }); return; }
-    ev.push({ t: 'trick', u, tk, ok: true, to: e });
-    if (tk === 'fire') {
-      say(B, `${u.name}의 화공! ${e.name} 부대에 불길이 번집니다.`, 'act-' + u.side);
-      applyLoss(B, e, Math.min(e.n * (UT[e.type].per || 1) * (B.kind === 'sea' ? 0.14 : 0.08), u.n * (UT[u.type].per || 1) * 0.35), u, 'trick', ev);
-      e.st.fire = 2; e.mo = clamp(e.mo - 8, 0, 100);
-    } else {
-      e.st.conf = 1; e.mo = clamp(e.mo - 5, 0, 100);
-      say(B, `${u.name}의 계략에 ${e.name} 부대가 혼란에 빠졌습니다.`, 'act-' + u.side);
+  const needsTarget = (id) => GD.ACTS[id].kind === 'hit' || !!GD.ACTS[id].target;
+  // 전법을 걸 수 있는 적 (h 자리에서)
+  function actTargets(B, u, id, h = u) {
+    if (!needsTarget(id)) return [];
+    const A = GD.ACTS[id], rng = actRange(u, id);
+    return alive(B, u.side === 'A' ? 'D' : 'A').filter(e => {
+      const dd = hd(h.c, h.r, e.c, e.r);
+      if (dd < 1 || dd > rng) return false;
+      if (A.melee && dd !== 1) return false;
+      if (e.st.hide && dd > 1) return false;
+      if (A.kind !== 'hit' && e.fixed) return false;
+      if (id === 'board' && UT[e.type].noBoard) return false;
+      return true;
+    });
+  }
+  function actWalls(B, u, id, h = u) {
+    const A = GD.ACTS[id];
+    if (!(A.kind === 'hit' && A.wallMult && B.castle && u.side !== B.castleSide)) return [];
+    return nbsWithin(h.c, h.r, actRange(u, id)).filter(([x, y]) => ['wall', 'gate'].includes(B.grid[y][x].t) && !unitAt(B, x, y));
+  }
+  // 지금 이 자리에서 못 쓰는 까닭 (쓸 수 있으면 빈 문자열)
+  function actBlocked(B, u, id) {
+    const A = GD.ACTS[id];
+    if (!actReady(B, u, id)) return `${actWait(B, u, id)}일 뒤`;
+    if (A.rough && !ROUGH.includes(B.grid[u.r][u.c].t)) return '숲·산·구릉·마을에서만';
+    if (A.rough && alive(B, u.side === 'A' ? 'D' : 'A').some(e => hd(e.c, e.r, u.c, u.r) <= 1)) return '적이 바로 옆에 있음';
+    if (needsTarget(id) && !actTargets(B, u, id).length && !actWalls(B, u, id).length) return '닿는 적이 없음';
+    return '';
+  }
+  // 움직인 뒤: 숨어 있던 자신은 드러나고, 바로 옆에 숨은 적도 들킨다
+  function afterMove(B, u) {
+    if (u.st.hide) u.st.hide = false;
+    for (const e of alive(B, u.side === 'A' ? 'D' : 'A')) {
+      if (e.st.hide && hd(e.c, e.r, u.c, u.r) === 1) { e.st.hide = false; say(B, `숨어 있던 ${e.name} 부대가 드러났습니다.`, 'sys'); }
     }
   }
-  // a: { to:{c,r}, target, kind, wall:[c,r], trick, wait }
+  function useAct(B, u, id, t, ev) {
+    const A = GD.ACTS[id];
+    u.cd[id] = B.day + A.cd;
+    const foes = alive(B, u.side === 'A' ? 'D' : 'A'), friends = alive(B, u.side);
+    const near = (list, k) => list.filter(o => hd(o.c, o.r, u.c, u.r) <= k);
+    const onCastle = (o) => T[B.grid[o.r][o.c].t].castle || T[B.grid[o.r][o.c].t].inside;
+    const side = 'act-' + u.side;
+    if (A.kind === 'hit') {
+      ev.push({ t: 'act', u, id });
+      const mods = Object.assign({ id }, A);
+      if (Array.isArray(t)) wallHit(B, u, t[0], t[1], ev, mods);
+      else if (t && !t.dead) strike(B, u, t, A.ranged ? 'ranged' : 'melee', ev, mods);
+      return;
+    }
+    if (A.target && t) {
+      const ok = Math.random() < trickOdds(B, u, id, t);
+      ev.push({ t: 'trick', u, tk: id, ok, to: t });
+      if (id === 'lure') { t.st.mark = 1; t.st.markBy = u.side; }
+      if (!ok) { say(B, `${u.name}의 ${A.name}이(가) 실패했습니다.${id === 'lure' ? ' (그래도 적의 빈틈이 드러났습니다)' : ''}`, side); return; }
+      if (id === 'fire') {
+        say(B, `${u.name}의 화공! ${t.name} 부대에 불길이 번집니다.`, side);
+        applyLoss(B, t, Math.min(t.n * (UT[t.type].per || 1) * (B.kind === 'sea' ? 0.14 : 0.08), u.n * (UT[u.type].per || 1) * 0.35), u, 'trick', ev);
+        t.st.fire = 2; t.mo = clamp(t.mo - 8, 0, 100);
+      } else {
+        t.st.conf = 1; t.mo = clamp(t.mo - 5, 0, 100);
+        say(B, `${u.name}의 ${A.name}에 ${t.name} 부대가 혼란에 빠졌습니다.`, side);
+      }
+      return;
+    }
+    ev.push({ t: 'act', u, id });
+    switch (id) {
+      case 'shield': u.st.shield = 1; say(B, `${u.name} 부대가 방패진을 쳤습니다. (받는 피해 -40%)`, side); break;
+      case 'spearwall': u.st.spearwall = 1; say(B, `${u.name} 부대가 장창진을 쳤습니다.`, side); break;
+      case 'ambush': u.st.hide = true; say(B, `${u.name} 부대가 몸을 숨겼습니다.`, side); break;
+      case 'diehard': u.st.diehard = 2; u.mo = Math.max(u.mo, 40); say(B, `${u.name} 부대가 죽기를 각오합니다!`, side); break;
+      case 'baesu': u.st.baesu = 2; u.mo = Math.max(u.mo, 45); say(B, `${u.name}이(가) 배수진을 쳤습니다. 물러설 곳은 없다!`, side); break;
+      case 'hagik': {
+        const ships = near(friends, A.rng).filter(o => UT[o.type].sea);
+        for (const o of ships) { o.st.rbuff = Math.max(o.st.rbuff || 0, 1); o.st.rmul = 1.35; }
+        say(B, `${u.name}의 학익진! ${ships.length}개 함대가 날개를 펴 적을 감쌉니다.`, side); break;
+      }
+      case 'chongtong': {
+        const list = near(friends, A.rng).filter(onCastle);
+        for (const o of list) { o.st.rbuff = 2; o.st.rmul = 1.4; }
+        say(B, `${u.name}이(가) 성벽 위에 총통을 걸었습니다. 성안 부대의 사격이 거세집니다.`, side); break;
+      }
+      case 'tuseok': {
+        let n = 0;
+        for (const e of near(foes, A.rng + 1)) {
+          if (!nbs(e.c, e.r).some(([x, y]) => ['wall', 'gate'].includes(B.grid[y][x].t))) continue;
+          applyLoss(B, e, Math.min(e.n * (UT[e.type].per || 1) * 0.05, u.n * (UT[u.type].per || 1) * 0.3), u, 'ranged', ev);
+          if (!e.dead) e.mo = clamp(e.mo - 8, 0, 100);
+          n++;
+        }
+        say(B, `${u.name}의 투석전! 성벽에 붙은 적 ${n}개 부대에 돌과 재가 쏟아집니다.`, side); break;
+      }
+      case 'hongui': {
+        const list = near(friends, A.rng).filter(o => ROUGH.includes(B.grid[o.r][o.c].t) && !foes.some(e => hd(e.c, e.r, o.c, o.r) <= 1));
+        for (const o of list) o.st.hide = true;
+        say(B, `${u.name}의 홍의 매복! ${list.length}개 부대가 산과 숲에 숨었습니다.`, side); break;
+      }
+      case 'monkrally': {
+        for (const o of near(friends, A.rng)) { o.mo = clamp(o.mo + 15, 0, 100); o.st.diehard = Math.max(o.st.diehard || 0, 1); if (o.rout && o.mo >= 35) o.rout = false; }
+        say(B, `${u.name}의 승병 결사! 이웃한 부대들이 결의를 다집니다.`, side); break;
+      }
+      case 'rally': {
+        const gain = 10 + R(u.cha / 10);
+        for (const o of [u, ...friends.filter(o => hd(o.c, o.r, u.c, u.r) === 1)]) { o.mo = clamp(o.mo + (o === u ? gain : 8), 0, 100); if (o.rout && o.mo >= 35) o.rout = false; }
+        say(B, `${u.name}이(가) 북을 울려 군사를 북돋웠습니다.`, side); break;
+      }
+      case 'repair': {
+        let n = 0;
+        for (const [x, y] of nbsWithin(u.c, u.r, A.rng).concat([[u.c, u.r]])) { const g = B.grid[y][x]; if (g.hpMax && g.hp < g.hpMax) { g.hp = Math.min(g.hpMax, g.hp + g.hpMax * 0.3); n++; } }
+        say(B, `${u.name}이(가) 성벽 ${n}곳을 고쳤습니다.`, side); break;
+      }
+      case 'nightraid': {
+        let n = 0;
+        for (const e of near(foes, A.rng)) { if (e.fixed) continue; if (Math.random() < 0.6) { e.st.conf = 1; n++; } e.mo = clamp(e.mo - 8, 0, 100); }
+        say(B, `${u.name}의 야습! 적 ${n}개 부대가 혼란에 빠졌습니다.`, side); break;
+      }
+    }
+  }
+  // a: { to:{c,r}, target, kind, wall:[c,r], act, wait }
   function act(B, u, a) {
     const ev = [];
     if (!a || u.dead) return ev;
     if (a.to && (a.to.c !== u.c || a.to.r !== u.r)) {
       const Rm = reachable(B, u), k = key(a.to.c, a.to.r);
-      if (Rm.has(k)) { ev.push({ t: 'move', u, path: pathOf(Rm, k) }); u.c = a.to.c; u.r = a.to.r; u.moved = true; }
+      if (Rm.has(k)) { ev.push({ t: 'move', u, path: pathOf(Rm, k) }); u.c = a.to.c; u.r = a.to.r; u.moved = true; afterMove(B, u); }
     }
-    const kind = a.target && !a.target.dead ? a.kind || kindFor(u, hd(u.c, u.r, a.target.c, a.target.r)) : null;
-    if (kind) strike(B, u, a.target, kind, ev);
-    else if (a.wall) wallHit(B, u, a.wall[0], a.wall[1], ev);
-    else if (a.trick) doTrick(B, u, a.trick, a.trickTo, ev);
+    if (a.act) useAct(B, u, a.act, a.wall || a.target || null, ev);
+    else {
+      const kind = a.target && !a.target.dead ? a.kind || kindFor(u, hd(u.c, u.r, a.target.c, a.target.r)) : null;
+      if (kind) strike(B, u, a.target, kind, ev);
+      else if (a.wall) wallHit(B, u, a.wall[0], a.wall[1], ev);
+    }
     u.done = true;
     checkOver(B);
     return ev;
@@ -567,6 +730,7 @@ const TB = (() => {
     }
     for (const u of alive(B, side)) {
       u.done = false; u.moved = false;
+      for (const k of ['shield', 'spearwall', 'diehard', 'baesu', 'rbuff']) if (u.st[k] > 0) u.st[k]--;
       if (u.st.fire > 0) { const ev = []; applyLoss(B, u, u.n * (UT[u.type].per || 1) * 0.04, null, 'fire', ev); u.st.fire--; if (!u.dead) say(B, `${u.name} 부대가 불길에 시달립니다.`, 'bad-' + side); }
       if (u.rout && !alive(B, side === 'A' ? 'D' : 'A').some(e => hd(e.c, e.r, u.c, u.r) <= 2)) { u.mo += 12; if (u.mo >= 35) { u.rout = false; say(B, `${u.name} 부대가 전열을 가다듬었습니다.`, 'act-' + side); } }
     }
@@ -584,6 +748,7 @@ const TB = (() => {
         if (B.flowDir < 0 && u.side === 'A' && !u.dead) { u.n -= u.n * 0.04; u.mo = clamp(u.mo - 5, 0, 100); }
       }
     }
+    for (const u of B.units) u.st.mark = 0;
     B.day++;
     if (B.day > B.maxDay && !B.over) B.over = { win: 'D', why: B.kind === 'land' ? '날이 다하도록 성을 지켜 냈습니다' : '공격 쪽이 물러났습니다' };
   }
@@ -650,8 +815,32 @@ const TB = (() => {
       return { to: best, wait: true };
     }
     let best = { score: -1e9, wait: true };
+    const acts = actsOf(B, u).filter(id => actReady(B, u, id));
+    const hitActs = acts.filter(id => GD.ACTS[id].kind === 'hit');
+    const canAmbush = acts.includes('ambush');
+    const breached = B.castle && B.grid.some(row => row.some(g => g.t === 'rubble'));
     for (const h of Rm.values()) {
       const pos = positional(B, u, h, foes);
+      // 공격 전법
+      for (const id of hitActs) {
+        const A = GD.ACTS[id], mods = Object.assign({ id }, A), kind = A.ranged ? 'ranged' : 'melee';
+        for (const e of actTargets(B, u, id, h)) {
+          const men = dmgMen(B, u, e, kind, true, h, mods);
+          let s = men / B.scale * 1000 * (e.cmdr ? 1.5 : 1) * (e.rout ? 1.1 : 1) + pos + (A.morale || 0) * 2 + (A.burn ? 35 : 0) + (A.splash ? 50 : 0) + (A.shock ? 20 : 0);
+          if (kind === 'melee' && UT[e.type].atk > 0.3 && !e.rout) s -= 0.45 * 0.055 * power(B, e, 'melee') / defense(B, u, h.c, h.r) * (e.st.spearwall ? 1.8 : 1) / B.scale * 1000 * 0.7;
+          if (s > best.score) best = { score: s, to: h, act: id, target: e };
+        }
+        for (const w of actWalls(B, u, id, h)) {
+          const g = B.grid[w[1]][w[0]];
+          const dmg = power(B, u, 'ranged', mods) * 0.018 * (A.asCannon ? UT.cannon.wallK : (UT[u.type].wallK || 0.3)) * (A.wallMult || 1);
+          const s = (dmg / g.hpMax * 600 * (g.t === 'gate' ? 1.5 : 1) + (dmg >= g.hp ? 300 : 0) + 40) * (breached ? 0.15 : 1) + pos;
+          if (s > best.score) best = { score: s, to: h, act: id, wall: w };
+        }
+      }
+      // 매복: 숲·산에 들어가 숨는다
+      if (canAmbush && ROUGH.includes(B.grid[h.r][h.c].t) && !foes.some(e => hd(e.c, e.r, h.c, h.r) <= 1) && foes.some(e => hd(e.c, e.r, h.c, h.r) <= 5)) {
+        if (pos + 110 > best.score) best = { score: pos + 110, to: h, act: 'ambush' };
+      }
       for (const e of foes) {
         const kind = bestKind(B, u, h, e);
         if (!kind) continue;
@@ -676,23 +865,51 @@ const TB = (() => {
       }
       if (pos > best.score) best = { score: pos, to: h, wait: true };
     }
-    // 계략: 제자리에서 (사흘에 한 번)
-    if (u.gen && u.int >= 70 && canTrick(B, u)) {
-      for (const tk of ['fire', 'conf']) {
-        for (const e of foes) {
-          if (hd(u.c, u.r, e.c, e.r) > TRICKS[tk].rng) continue;
-          const p = trickOdds(B, u, tk, e);
-          const fireMen = Math.min(e.n * (UT[e.type].per || 1) * (B.kind === 'sea' ? 0.14 : 0.08), u.n * (UT[u.type].per || 1) * 0.35);
-          const val = tk === 'fire' ? p * fireMen / B.scale * 1000 : p * 90;
-          const s = val + positional(B, u, { c: u.c, r: u.r }, foes);
-          if (s > best.score * 1.1 && p >= 0.5) best = { score: s, trick: tk, trickTo: e, to: { c: u.c, r: u.r } };
+    // 제자리에서 쓰는 전법 (태세·도움·흔들기)
+    const here = { c: u.c, r: u.r };
+    const posHere = positional(B, u, here, foes);
+    const friends = alive(B, u.side).filter(o => o !== u);
+    const nearF = (k) => friends.filter(o => hd(o.c, o.r, u.c, u.r) <= k);
+    const nearE = (k) => foes.filter(e => hd(e.c, e.r, u.c, u.r) <= k);
+    for (const id of acts) {
+      const A = GD.ACTS[id];
+      if (A.kind === 'hit' || id === 'ambush') continue;
+      let val = 0, tgt = null;
+      if (id === 'shield' || id === 'spearwall') {
+        const inc = incoming(B, u, here, foes) / B.scale * 1000;
+        val = inc * (id === 'shield' ? 0.4 : 0.25) + (id === 'spearwall' && nearE(6).some(e => e.type === 'cav') ? 40 : 0);
+      } else if (id === 'diehard') val = nearE(2).length && u.mo < 80 ? 60 : 0;
+      else if (id === 'baesu') val = nearE(3).length ? 80 : 0;
+      else if (id === 'hagik') val = nearF(A.rng).filter(o => UT[o.type].sea && !o.done && foes.some(e => hd(e.c, e.r, o.c, o.r) <= UT[o.type].rng + 2)).length * 70;
+      else if (id === 'chongtong') val = nearF(A.rng).filter(o => !o.done && UT[o.type].rng > 1 && (T[B.grid[o.r][o.c].t].castle || T[B.grid[o.r][o.c].t].inside) && foes.some(e => hd(e.c, e.r, o.c, o.r) <= UT[o.type].rng)).length * 60;
+      else if (id === 'tuseok') val = nearE(A.rng + 1).filter(e => nbs(e.c, e.r).some(([x, y]) => ['wall', 'gate'].includes(B.grid[y][x].t))).length * 55;
+      else if (id === 'hongui') { const n = [u, ...nearF(A.rng)].filter(o => !o.st.hide && ROUGH.includes(B.grid[o.r][o.c].t) && !foes.some(e => hd(e.c, e.r, o.c, o.r) <= 1)).length; val = n >= 2 && nearE(6).length ? n * 45 : 0; }
+      else if (id === 'monkrally') val = nearF(A.rng).reduce((t, o) => t + (o.rout ? 60 : o.mo < 70 ? 25 : 0), 0);
+      else if (id === 'rally') val = u.mo < 45 || nearF(1).some(o => o.rout) ? 90 : 0;
+      else if (id === 'repair') { let miss = 0; for (const [x, y] of nbsWithin(u.c, u.r, A.rng).concat([[u.c, u.r]])) { const g = B.grid[y][x]; if (g.hpMax) miss += (g.hpMax - g.hp) / g.hpMax; } val = miss * 250; }
+      else if (id === 'nightraid') val = nearE(A.rng).filter(e => !e.fixed).length * 42;
+      else if (A.target) {
+        for (const e of actTargets(B, u, id)) {
+          const p = trickOdds(B, u, id, e);
+          if (p < 0.45) continue;
+          const v = id === 'fire' ? p * Math.min(e.n * (UT[e.type].per || 1) * (B.kind === 'sea' ? 0.14 : 0.08), u.n * (UT[u.type].per || 1) * 0.35) / B.scale * 1000 : id === 'lure' ? p * 90 + 50 : p * 90;
+          if (v > val) { val = v; tgt = e; }
         }
       }
+      if (val > 0 && posHere + val > best.score) best = { score: posHere + val, to: here, act: id, target: tgt };
     }
-    if (u.gen && u.cha >= 70 && u.mo < 45 && canTrick(B, u)) best = { trick: 'rally', to: { c: u.c, r: u.r }, score: 0 };
     return best;
   }
-  const canTrick = (B, u) => !!u.gen && (u.trickDay === undefined || B.day - u.trickDay >= 3);
+  // 다음 적 차례에 받을 것으로 보이는 피해 (군사 수)
+  function incoming(B, u, h, foes) {
+    let t = 0;
+    for (const e of foes) {
+      if (e.rout || hd(h.c, h.r, e.c, e.r) > UT[e.type].mp / 2 + UT[e.type].rng) continue;
+      const kind = UT[e.type].ratk > UT[e.type].atk ? 'ranged' : 'melee';
+      t += 0.055 * power(B, e, kind) / defense(B, u, h.c, h.r);
+    }
+    return t;
+  }
   function nbsWithin(c, r, k) {
     const out = [];
     for (let y = Math.max(0, r - k); y <= Math.min(ROWS - 1, r + k); y++) for (let x = Math.max(0, c - k - 1); x <= Math.min(COLS - 1, c + k + 1); x++) {
@@ -700,8 +917,10 @@ const TB = (() => {
     }
     return out;
   }
+  // 주변을 돕는 전법이 있는 부대가 먼저 움직인다
   function order(B, side) {
-    return alive(B, side).filter(u => !u.done).sort((a, b) => (UT[b.type].rng - UT[a.type].rng) || (a.type === 'cav') - (b.type === 'cav'));
+    const lead = (u) => actsOf(B, u).some(id => ['hagik', 'chongtong', 'hongui', 'monkrally'].includes(id) && actReady(B, u, id)) ? 1 : 0;
+    return alive(B, side).filter(u => !u.done).sort((a, b) => (lead(b) - lead(a)) || (UT[b.type].rng - UT[a.type].rng) || (a.type === 'cav') - (b.type === 'cav'));
   }
   function aiShouldRetreat(B, side) {
     if (B.day < 6 || side === B.castleSide) return false;
@@ -801,7 +1020,7 @@ const TB = (() => {
         <div class="tb-hint" id="tbHint"></div>
         <div class="tb-btns">
           <select id="tbSpeed" class="btn" title="애니메이션 속도"><option value="0.6">느리게</option><option value="1" selected>보통</option><option value="2">빠르게</option></select>
-          <button class="btn" id="tbTrick" disabled>계략</button>
+          <button class="btn" id="tbAct" disabled title="병종 전법·장수 고유 전법·계략">전법</button>
           <button class="btn" id="tbWait" disabled>대기</button>
           <button class="btn primary" id="tbEnd">차례 마침</button>
           <button class="btn" id="tbAuto" title="남은 전투를 컴퓨터에게 맡기고 지켜봅니다">위임</button>
@@ -824,7 +1043,7 @@ const TB = (() => {
     root.querySelector('#tbSpeed').addEventListener('change', (e) => { V.speed = +e.target.value; });
     root.querySelector('#tbEnd').addEventListener('click', () => endPlayerPhase());
     root.querySelector('#tbWait').addEventListener('click', () => { if (V.sel) { V.sel.done = true; deselect(); render(); maybeAutoEnd(); } });
-    root.querySelector('#tbTrick').addEventListener('click', () => trickMenu());
+    root.querySelector('#tbAct').addEventListener('click', () => actMenu());
     root.querySelector('#tbAuto').addEventListener('click', () => { V.delegated = true; deselect(); if (V.phaseResolve) V.phaseResolve(); });
     root.querySelector('#tbInstant').addEventListener('click', () => { V.instant = true; V.delegated = true; deselect(); if (V.phaseResolve) V.phaseResolve(); });
     root.querySelector('#tbRetreat').addEventListener('click', () => {
@@ -832,7 +1051,7 @@ const TB = (() => {
       if (!confirm('군사를 거두어 물러나시겠습니까? 전투에서 진 것으로 처리됩니다.')) return;
       retreat(V.B, V.player); deselect(); if (V.phaseResolve) V.phaseResolve();
     });
-    if (!V.player) { for (const id of ['tbTrick', 'tbWait', 'tbEnd', 'tbAuto', 'tbRetreat']) root.querySelector('#' + id).classList.add('hidden'); }
+    if (!V.player) { for (const id of ['tbAct', 'tbWait', 'tbEnd', 'tbAuto', 'tbRetreat']) root.querySelector('#' + id).classList.add('hidden'); }
     render();
   }
   function drawTerrain() {
@@ -884,6 +1103,9 @@ const TB = (() => {
       g.classList.toggle('sel', V.sel === u);
       g.classList.toggle('conf', u.st.conf > 0);
       g.classList.toggle('burn', u.st.fire > 0);
+      g.classList.toggle('guard', !!(u.st.shield || u.st.spearwall));
+      g.classList.toggle('hide', !!u.st.hide);
+      g.classList.toggle('buff', !!(u.st.rbuff || u.st.diehard || u.st.baesu));
       g.querySelector('.tb-hpf').setAttribute('width', (32 * clamp(u.n / u.n0, 0, 1)).toFixed(1));
       g.querySelector('.tb-un').textContent = UT[u.type].sea ? `${Math.max(1, R(u.n))}척` : (u.n >= 10000 ? (u.n / 10000).toFixed(1) + '만' : R(u.n).toLocaleString());
     }
@@ -914,8 +1136,9 @@ const TB = (() => {
     const isMine = V.player && B.side === V.player && !V.delegated && !B.over;
     root.querySelector('#tbEnd').disabled = !isMine;
     root.querySelector('#tbWait').disabled = !(isMine && V.sel);
-    root.querySelector('#tbTrick').disabled = !(isMine && V.sel && canTrick(B, V.sel));
-    root.querySelector('#tbTrick').textContent = V.sel && V.sel.gen && !canTrick(B, V.sel) ? `계략 (${3 - (B.day - V.sel.trickDay)}일 뒤)` : '계략';
+    const acts = V.sel ? actsOf(B, V.sel) : [];
+    root.querySelector('#tbAct').disabled = !(isMine && V.sel && acts.length);
+    root.querySelector('#tbAct').textContent = acts.length ? `전법 ${acts.filter(id => !actBlocked(B, V.sel, id)).length}/${acts.length}` : '전법';
     root.querySelector('#tbAuto').disabled = !V.player || V.delegated || !!B.over;
     root.querySelector('#tbInstant').disabled = !!B.over || V.instant;
     root.querySelector('#tbRetreat').disabled = !isMine;
@@ -929,7 +1152,7 @@ const TB = (() => {
     else if (!V.player) t = '컴퓨터끼리 싸우고 있습니다.';
     else if (V.delegated) t = '위임 중입니다. 컴퓨터가 대신 지휘합니다.';
     else if (B.side !== V.player) t = '적이 움직이고 있습니다…';
-    else if (V.mode === 'trick') t = `${TRICKS[V.trick].name}: 대상 부대를 고르세요. (빈 곳을 누르면 취소)`;
+    else if (V.mode === 'act') t = `${GD.ACTS[V.actId].name}: 대상을 고르세요. (빈 곳을 누르면 취소)`;
     else if (V.sel) t = `${V.sel.name} — 파란 칸으로 이동, 붉은 고리의 적을 누르면 공격${B.castle && V.player === 'A' ? ', 주황 고리는 성벽·성문 공격' : ''}. 적을 바로 누르면 알맞은 자리로 가서 공격합니다.`;
     else t = '움직일 부대를 고르세요. 모두 움직였거나 끝내려면 [차례 마침]을 누르세요.';
     root.querySelector('#tbHint').textContent = t;
@@ -949,9 +1172,24 @@ const TB = (() => {
         <dt>통솔·무력·지력</dt><dd>${u.lea} · ${u.war} · ${u.int}</dd>
         <dt>이동·사거리</dt><dd>${ut.mp} · ${ut.rng}</dd>
         ${u.skills.length ? `<dt>특기</dt><dd>${u.skills.map(s => GD.SKILLS[s]).join(', ')}</dd>` : ''}
+        ${statusText(u) ? `<dt>상태</dt><dd>${statusText(u)}</dd>` : ''}
       </dl>
+      <div class="tb-acts">${actsOf(B, u).map(id => { const A = GD.ACTS[id], w = actWait(B, u, id); return `<span class="tb-act${w ? ' wait' : ''}" title="${A.desc}">${A.name}${w ? ` <small>${w}일</small>` : ''}</span>`; }).join('') || '<span class="muted">전법 없음</span>'}</div>
       <p class="tb-note">${unitNote(u)}</p>`;
     root.querySelector('#tbHex').innerHTML = `<b>${T[h.t].name}</b> — 방어 ×${(((h.t === 'wall' || h.t === 'gate') && u.side === B.castleSide) ? WALL_DEF[B.castle][h.t] : T[h.t].def || 1).toFixed(2)}${h.hpMax ? ` · 내구 ${R(h.hp)}/${h.hpMax}` : ''}`;
+  }
+  function statusText(u) {
+    const st = u.st, out = [];
+    if (st.shield) out.push('방패진');
+    if (st.spearwall) out.push('장창진');
+    if (st.hide) out.push('매복');
+    if (st.diehard) out.push('결사');
+    if (st.baesu) out.push('배수진');
+    if (st.rbuff) out.push(`사격 ×${st.rmul}`);
+    if (st.mark) out.push('빈틈');
+    if (st.conf) out.push('혼란');
+    if (st.fire) out.push('불길');
+    return out.join(' · ');
   }
   function unitNote(u) {
     const n = {
@@ -979,7 +1217,7 @@ const TB = (() => {
     if (B.over) return;
     showCard(u);
     if (!V.player || V.delegated || B.side !== V.player) return;
-    if (V.mode === 'trick') { if (u.side !== V.player) return useTrick(u); V.mode = null; }
+    if (V.mode === 'act') { if (u.side !== V.player) return useActOn(u); V.mode = null; }
     if (u.side === V.player) {
       if (u.done || u.ally) { deselect(); showCard(u); return; }
       select(u);
@@ -1019,7 +1257,7 @@ const TB = (() => {
   async function onHex(c, r) {
     const { B } = V;
     hoverHex(c, r);
-    if (!V.sel || B.over || V.mode === 'trick') { if (V.mode === 'trick') { V.mode = null; highlight(); render(); } return; }
+    if (!V.sel || B.over || V.mode === 'act') { if (V.mode === 'act') { V.mode = null; highlight(); render(); } return; }
     const o = unitAt(B, c, r);
     if (o && o.side !== V.sel.side) return attackTarget(o);
     if (o && o.side === V.sel.side) return o.done ? null : select(o);
@@ -1029,10 +1267,11 @@ const TB = (() => {
     const u = V.sel;
     const ev = [{ t: 'move', u, path: pathOf(V.R, k) }];
     u.c = c; u.r = r; u.moved = true;
+    afterMove(B, u);
     await playEvents(ev);
     V.R = reachable(B, u);
     const anyTarget = alive(B, u.side === 'A' ? 'D' : 'A').some(e => bestKind(B, u, u, e)) || (B.castle && u.side !== B.castleSide && nbsWithin(u.c, u.r, UT[u.type].ratk > 0 ? UT[u.type].rng : 1).some(([x, y]) => ['wall', 'gate'].includes(B.grid[y][x].t) && !unitAt(B, x, y)));
-    if (!anyTarget && !u.gen) { u.done = true; deselect(); maybeAutoEnd(); return; }
+    if (!anyTarget && !actsOf(B, u).some(id => !actBlocked(B, u, id))) { u.done = true; deselect(); maybeAutoEnd(); return; }
     highlight(); render();
   }
   function hoverHex(c, r) {
@@ -1066,33 +1305,46 @@ const TB = (() => {
     if (V.B.over) { if (V.phaseResolve) V.phaseResolve(); return; }
     maybeAutoEnd();
   }
-  function trickMenu() {
-    const u = V.sel; if (!u || !u.gen) return;
+  function actMenu() {
+    const u = V.sel; if (!u) return;
+    const B = V.B;
     const float = V.root.querySelector('#tbFloat');
-    float.innerHTML = `<div class="tb-menu"><b>${u.name}의 계략</b>
-      <button data-t="fire">🔥 화공 <small>2칸 안의 적에게 불을 지른다. 숲·배에 잘 붙는다.</small></button>
-      <button data-t="conf">🌀 혼란 <small>3칸 안의 적을 한 차례 멈추게 한다.</small></button>
-      <button data-t="rally">🥁 고무 <small>자신과 이웃한 아군의 사기를 높인다.</small></button>
-      <button data-t="x" class="x">취소</button></div>`;
+    const items = actsOf(B, u).map(id => {
+      const A = GD.ACTS[id], why = actBlocked(B, u, id);
+      const tag = GD.TYPE_ACTS[u.type].includes(id) ? '병종' : (GD.GEN_ACTS[u.gen] || []).includes(id) ? '고유' : '계략';
+      return `<button data-a="${id}" ${why ? 'disabled' : ''}><b>${A.name}</b> <i>${A.hanja} · ${tag}</i>${why ? `<em>${why}</em>` : ''}<small>${A.desc}</small></button>`;
+    }).join('');
+    float.innerHTML = `<div class="tb-menu"><b>${u.name} 부대의 전법</b>${items || '<p class="muted">쓸 수 있는 전법이 없습니다.</p>'}<button data-a="x" class="x">닫기</button></div>`;
     float.classList.add('on');
     for (const b of float.querySelectorAll('button')) b.addEventListener('click', () => {
       float.classList.remove('on'); float.innerHTML = '';
-      const t = b.dataset.t;
-      if (t === 'x') return;
-      if (t === 'rally') return doAction({ trick: 'rally' });
-      V.mode = 'trick'; V.trick = t;
+      const id = b.dataset.a;
+      if (id === 'x') return;
+      if (!needsTarget(id)) return doAction({ act: id });
+      V.mode = 'act'; V.actId = id;
       V.lay.hl.innerHTML = '';
-      for (const e of alive(V.B, u.side === 'A' ? 'D' : 'A')) {
-        if (hd(u.c, u.r, e.c, e.r) > TRICKS[t].rng || e.fixed) continue;
+      const A = GD.ACTS[id];
+      for (const e of actTargets(B, u, id)) {
         const [x, y] = px(e.c, e.r);
-        const ring = el('circle', { cx: x, cy: y, r: 22, class: 'tb-tgt trick' }, V.lay.hl);
-        ring.addEventListener('click', (ev) => { ev.stopPropagation(); useTrick(e); });
-        const tx = el('text', { x, y: y - 24, class: 'tb-est' }, V.lay.hl); tx.textContent = `${R(trickOdds(V.B, u, t, e) * 100)}%`;
+        const ring = el('circle', { cx: x, cy: y, r: 22, class: 'tb-tgt act' }, V.lay.hl);
+        ring.addEventListener('click', (ev) => { ev.stopPropagation(); useActOn(e); });
+        const tx = el('text', { x, y: y - 24, class: 'tb-est' }, V.lay.hl);
+        if (A.kind === 'hit') { const men = dmgMen(B, u, e, A.ranged ? 'ranged' : 'melee', true, null, Object.assign({ id }, A)); tx.textContent = `-${UT[e.type].sea ? Math.max(0.1, men / (UT[e.type].per || 1)).toFixed(1) + '척' : R(men).toLocaleString()}`; }
+        else tx.textContent = `${R(trickOdds(B, u, id, e) * 100)}%`;
+      }
+      for (const [x0, y0] of actWalls(B, u, id)) {
+        const [x, y] = px(x0, y0);
+        const ring = el('circle', { cx: x, cy: y, r: 21, class: 'tb-wtgt' }, V.lay.hl);
+        ring.addEventListener('click', (ev) => { ev.stopPropagation(); V.mode = null; doAction({ act: id, wall: [x0, y0] }); });
       }
       hint();
     });
   }
-  function useTrick(e) { const t = V.trick; V.mode = null; doAction({ trick: t, trickTo: e }); }
+  function useActOn(e) {
+    const id = V.actId; V.mode = null;
+    if (!V.sel || !actTargets(V.B, V.sel, id).includes(e)) { highlight(); render(); return; }
+    doAction({ act: id, target: e });
+  }
   function maybeAutoEnd() {
     const { B } = V;
     if (!V.player || B.side !== V.player || V.delegated) return;
@@ -1109,6 +1361,7 @@ const TB = (() => {
       else if (e.t === 'hit') await shot(e, sp);
       else if (e.t === 'wall') await wallFx(e, sp);
       else if (e.t === 'trick') await trickFx(e, sp);
+      else if (e.t === 'act') await actFx(e, sp);
       else if (e.t === 'breach') { drawTerrain(); }
     }
   }
@@ -1119,14 +1372,25 @@ const TB = (() => {
     const pts = path.map(([c, r]) => px(c, r));
     const per = 110 / sp;
     return new Promise(res => {
+      let finished = false;
+      // 탭이 가려져 화면 갱신이 멈춰도 이동은 끝나도록 시간으로도 마무리한다
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        const [xe, ye] = pts[pts.length - 1];
+        g.setAttribute('transform', `translate(${xe} ${ye})`);
+        g._moving = false; res();
+      };
       const t0 = performance.now();
       const step = (t) => {
+        if (finished) return;
         const k = Math.max(0, (t - t0) / per), i = Math.min(pts.length - 2, Math.floor(k)), f = Math.min(1, k - i);
         const [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
         g.setAttribute('transform', `translate(${x1 + (x2 - x1) * f} ${y1 + (y2 - y1) * f})`);
-        if (k < pts.length - 1) requestAnimationFrame(step); else { g._moving = false; res(); }
+        if (k < pts.length - 1) requestAnimationFrame(step); else finish();
       };
       requestAnimationFrame(step);
+      setTimeout(finish, per * (pts.length - 1) + 300);
     });
   }
   function shot(e, sp) {
@@ -1165,10 +1429,24 @@ const TB = (() => {
     const tg = e.to || e.u;
     const [x, y] = px(tg.c, tg.r);
     const t = el('text', { x, y: y - 22, class: 'tb-trick' + (e.ok ? '' : ' fail') }, V.lay.fx);
-    t.textContent = (e.tk === 'fire' ? '🔥' : e.tk === 'conf' ? '🌀' : '🥁') + (e.ok ? '' : ' 실패');
+    t.textContent = (e.tk === 'fire' ? '🔥' : e.tk === 'conf' ? '🌀' : e.tk === 'lure' ? '🎣' : '✨') + (e.ok ? '' : ' 실패');
     setTimeout(() => t.remove(), 900 / sp);
     render();
     return sleep(450 / sp);
+  }
+
+  function actFx(e, sp) {
+    const A = GD.ACTS[e.id];
+    const [x, y] = px(e.u.c, e.u.r);
+    const t = el('text', { x, y: y - 28, class: 'tb-actname' }, V.lay.fx);
+    t.textContent = A.name;
+    setTimeout(() => t.remove(), 1100 / sp);
+    if (A.kind === 'aura' || e.id === 'nightraid') {
+      const ring = el('circle', { cx: x, cy: y, r: Math.max(1, A.rng || 1) * HW * 0.95, class: 'tb-aura' }, V.lay.fx);
+      setTimeout(() => ring.remove(), 900 / sp);
+    }
+    render();
+    return sleep((A.kind === 'hit' ? 220 : 480) / sp);
   }
 
   // ── 흐름
@@ -1232,5 +1510,5 @@ const TB = (() => {
     box.querySelector('#tbDone').addEventListener('click', () => { const r = V.resolve; V = null; r(res); });
   }
 
-  return { run, simulate, setup, defaultType, UT, T, get last() { return TB_last; } };
+  return { run, simulate, setup, defaultType, genActIds, UT, T, get last() { return TB_last; } };
 })();

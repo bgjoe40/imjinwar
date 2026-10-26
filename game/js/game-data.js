@@ -150,6 +150,52 @@ GD.FAC_UNITS = {
 };
 GD.FAC_SHIPS = { joseon: ['panok', 'turtle'], japan: ['atake', 'seki'], ming: ['mship'] };
 
+// ── 전법 (전투에서 한 차례의 행동으로 쓰는 기술)
+// 병종마다 쓰는 전법 + 이름난 장수의 고유 전법 + 계략(지력 75↑ 화공, 지력 80↑ 혼란, 매력 75↑ 고무; '계략' 특기는 모두)
+// kind: hit 강한 공격, self 자기 태세, aura 주변 아군을 돕기, debuff 적을 흔들기, wall 성벽 고치기
+// rng 사거리(없으면 병종 사거리), cd 다시 쓰기까지 걸리는 날, where 육전·해전 한정, castle 성을 지킬 때만
+GD.ACTS = {
+  shield:    { name: '방패진', hanja: '防牌陣', kind: 'self', cd: 2, where: 'land', desc: '방패를 세워 진을 친다. 다음 차례까지 받는 피해가 40% 줄어든다.' },
+  spearwall: { name: '장창진', hanja: '長槍陣', kind: 'self', cd: 2, where: 'land', desc: '긴 창을 겨눠 진을 친다. 받는 피해가 25% 줄고, 근접 공격해 온 적에게 되받아치는 피해가 커진다(기병에게는 더 크게).' },
+  charge:    { name: '돌격', hanja: '突擊', kind: 'hit', melee: true, mult: 1.6, morale: 10, cd: 3, where: 'land', desc: '말을 몰아 들이친다. 근접 공격 1.6배, 적 사기 -10. 논·숲·산에서는 힘을 쓰지 못한다.' },
+  volley:    { name: '일제 사격', hanja: '一齊射', kind: 'hit', ranged: true, mult: 1.4, cd: 2, desc: '모든 궁수가 한꺼번에 쏜다. 원거리 공격 1.4배.' },
+  firearrow: { name: '불화살', hanja: '火矢', kind: 'hit', ranged: true, mult: 1.0, burn: 0.35, cd: 3, desc: '불붙인 화살을 쏜다. 맞은 적이 35% 확률로 불길에 휩싸인다(숲·배는 더 잘 탄다).' },
+  rapid:     { name: '연속 사격', hanja: '連射', kind: 'hit', ranged: true, mult: 1.3, shock: 2, cd: 2, desc: '줄을 바꿔 가며 잇달아 쏜다. 원거리 공격 1.3배, 적 사기를 크게 떨어뜨린다.' },
+  barrage:   { name: '집중 포격', hanja: '集中砲', kind: 'hit', ranged: true, mult: 1.5, wallMult: 1.5, cd: 2, where: 'land', desc: '포를 한곳에 모아 쏜다. 원거리 공격 1.5배, 성벽·성문에도 1.5배.' },
+  ambush:    { name: '매복', hanja: '埋伏', kind: 'self', cd: 3, rough: true, where: 'land', desc: '숲·산·구릉·마을에 몸을 숨긴다. 적이 멀리서 쏘거나 계략을 걸 수 없고, 다음 공격이 1.8배가 된다. 움직이거나 공격하면 드러난다.' },
+  diehard:   { name: '결사항전', hanja: '決死抗戰', kind: 'self', cd: 4, desc: '죽기를 각오하고 싸운다. 두 차례 동안 사기가 40 밑으로 떨어지지 않고 근접 공격 1.2배.' },
+  salvo:     { name: '일제 포격', hanja: '一齊砲', kind: 'hit', ranged: true, mult: 1.4, cd: 2, where: 'sea', desc: '배의 총통을 한꺼번에 쏜다. 원거리 공격 1.4배.' },
+  ram:       { name: '충파', hanja: '衝破', kind: 'hit', melee: true, mult: 1.8, morale: 15, cd: 3, where: 'sea', desc: '적의 배를 들이받아 깨뜨린다. 근접 공격 1.8배, 적 사기 -15.' },
+  board:     { name: '등선 돌격', hanja: '登船', kind: 'hit', melee: true, mult: 1.5, cd: 2, where: 'sea', desc: '배를 붙이고 건너가 칼싸움을 벌인다. 근접 공격 1.5배. 거북선에는 오를 수 없다.' },
+  // 장수 고유 전법
+  hagik:     { name: '학익진', hanja: '鶴翼陣', kind: 'aura', rng: 3, cd: 4, where: 'sea', desc: '학이 날개를 펴듯 적을 감싼다. 3칸 안 아군 배의 원거리 공격이 이번 차례 1.35배.' },
+  hongui:    { name: '홍의 매복', hanja: '紅衣伏', kind: 'aura', rng: 2, cd: 4, where: 'land', desc: '붉은 옷의 장군이 의병을 숨긴다. 2칸 안에서 숲·산·구릉·마을에 있는 아군이 모두 매복한다.' },
+  chongtong: { name: '총통 수성', hanja: '銃筒守城', kind: 'aura', rng: 3, cd: 3, where: 'land', castle: true, desc: '현자총통을 성벽 위에 걸고 쏜다. 3칸 안 성 위·성안 아군의 원거리 공격이 다음 차례까지 1.4배.' },
+  tuseok:    { name: '투석전', hanja: '投石戰', kind: 'aura', rng: 3, cd: 3, where: 'land', castle: true, desc: '성벽 아래로 돌과 재를 퍼붓는다. 3칸 안에서 성벽에 붙은 적이 모두 피해를 입고 사기가 떨어진다.' },
+  baesu:     { name: '배수진', hanja: '背水陣', kind: 'self', cd: 5, where: 'land', desc: '물러설 곳 없이 싸운다. 두 차례 동안 공격 1.3배, 사기가 45 밑으로 떨어지지 않지만 받는 피해는 25% 늘어난다.' },
+  frankish:  { name: '불랑기 포격', hanja: '佛狼機', kind: 'hit', ranged: true, rng: 3, mult: 1.6, wallMult: 1.8, asCannon: true, cd: 3, where: 'land', desc: '명군의 불랑기포를 쏜다. 3칸 안의 적이나 성벽에 포격한다(성벽 1.8배).' },
+  fierce:    { name: '맹공', hanja: '猛攻', kind: 'hit', melee: true, mult: 1.6, cd: 3, desc: '앞장서 몰아친다. 근접 공격 1.6배.' },
+  bigyeok:   { name: '비격진천뢰', hanja: '飛擊震天雷', kind: 'hit', ranged: true, rng: 3, mult: 0.8, splash: 0.5, morale: 15, asCannon: true, cd: 4, where: 'land', desc: '터지는 포탄을 쏜다. 3칸 안의 적과 그 옆 적까지 피해를 입히고 사기를 크게 떨어뜨린다.' },
+  monkrally: { name: '승병 결사', hanja: '僧兵決死', kind: 'aura', rng: 2, cd: 4, desc: '2칸 안 아군의 사기를 15 올리고, 한 차례 동안 사기가 40 밑으로 떨어지지 않게 한다.' },
+  repair:    { name: '성벽 보수', hanja: '修築', kind: 'wall', rng: 2, cd: 3, where: 'land', castle: true, desc: '2칸 안의 성벽·성문을 고친다(내구 30% 회복).' },
+  nightraid: { name: '야습', hanja: '夜襲', kind: 'debuff', rng: 3, cd: 5, desc: '밤에 몰래 들이친다. 3칸 안의 적 부대마다 60% 확률로 혼란에 빠지고 사기 -8.' },
+  lure:      { name: '유인 매복', hanja: '釣野伏', kind: 'debuff', rng: 3, cd: 4, target: true, desc: '거짓으로 물러나 적을 끌어들인다. 대상이 혼란에 빠지기 쉽고, 오늘 그 적을 치는 아군 공격이 1.3배.' },
+  // 계략 (지력·매력이 높은 장수)
+  fire:      { name: '화공', hanja: '火攻', kind: 'debuff', rng: 2, cd: 3, target: true, desc: '2칸 안의 적에게 불을 지른다. 숲·배에 잘 붙고, 지력이 높을수록 잘 된다.' },
+  conf:      { name: '혼란', hanja: '混亂', kind: 'debuff', rng: 3, cd: 3, target: true, desc: '거짓 명령을 퍼뜨려 3칸 안의 적을 한 차례 멈추게 한다.' },
+  rally:     { name: '고무', hanja: '鼓舞', kind: 'aura', rng: 1, cd: 3, desc: '북을 울려 자신과 이웃한 아군의 사기를 높인다. 무너진 부대도 다시 일어선다.' },
+};
+GD.TYPE_ACTS = {
+  inf: ['shield'], spear: ['spearwall'], cav: ['charge'], bow: ['volley', 'firearrow'], gun: ['rapid'], cannon: ['barrage'],
+  uib: ['ambush'], monk: ['diehard'], panok: ['salvo'], turtle: ['ram'], atake: ['board'], seki: ['board'], mship: ['salvo'], fort: [],
+};
+GD.GEN_ACTS = {
+  yisunsin: ['hagik'], gwakjaewoo: ['hongui'], kimsimin: ['chongtong'], kwonyul: ['tuseok'], sinrip: ['baesu'],
+  parkjin: ['bigyeok'], leejangson: ['bigyeok'], jgr: ['fierce'], kimdr: ['fierce'], hwangjin: ['fierce'], jeongun: ['fierce'],
+  hyujeong: ['monkrally'], samyeong: ['monkrally'], yeonggyu: ['diehard'], joheon: ['diehard'], song: ['diehard'], kimcheonil: ['diehard'],
+  liruson: ['frankish'], tachibana: ['fierce'], fukushima: ['fierce'], kato: ['repair'], todo: ['nightraid'], shimazu: ['lure'], takakage: ['lure'],
+};
+
 // ── 장수: [이름, 대표 한자, 세력, 통솔, 무력, 지력, 정치, 매력, 특기]
 // 특기: navy 수군, turtle 거북선 건조, cav 기병, bow 궁술, gun 조총, cannon 화포, siege 수성, build 축성, admin 내정,
 //       envoy 외교, uib 의병, monk 승병, trick 계략, charge 돌격, king 군주(전투에 나가지 않음)

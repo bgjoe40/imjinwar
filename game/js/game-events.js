@@ -315,8 +315,8 @@ const GEV = (() => {
         body: '<p>조정과 도원수 권율은 부산 앞바다로 나아가 일본 수군을 치라고 원균을 거듭 재촉했습니다. 지친 조선 수군은 거센 풍랑에 시달리다 거제 칠천량에 닻을 내렸고, 그 밤 일본 수군이 사방에서 들이닥쳤습니다.</p><p class="ev-tip">함대는 지치고 사기가 낮습니다. 살아남는 것이 목표입니다.</p>', hist: ['e25'] });
       fl.zone = 's_geoje'; fl.mo = 25; S().flags.ambush = 'D';
       const T = S().cities.tsushima;
-      const js = { atake: Math.min(12, T.ships.atake || 0), seki: Math.min(150, T.ships.seki || 0) };
-      js.seki = Math.max(js.seki, 120); js.atake = Math.max(js.atake, 10);
+      const js = { atake: Math.min(16, T.ships.atake || 0), seki: Math.min(200, T.ships.seki || 0) };
+      js.seki = Math.max(js.seki, 200); js.atake = Math.max(js.atake, 16);
       T.ships.atake = Math.max(0, (T.ships.atake || 0) - js.atake); T.ships.seki = Math.max(0, (T.ships.seki || 0) - js.seki);
       const jg = ['todo', 'wakizaka', 'katoyoshiaki', 'michifusa'].filter(g => on(g) && !S().gens[g].fleet);
       const jf = { id: S().fid++, o: 'japan', zone: 's_geoje', g: jg, s: js, tr: 85, mo: 90, moved: true };

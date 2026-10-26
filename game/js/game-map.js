@@ -281,16 +281,25 @@ const GMap = (() => {
     tok.innerHTML = `<circle r="9" fill="${facColor(fac)}"/><text y="4">${GD.FAC[fac].seal}</text>`;
     const dur = Math.min(1400, 350 + len * 2.2) / speed;
     return new Promise(res => {
+      let finished = false;
+      // 탭이 가려져 화면 갱신이 멈춰도 진군은 끝나도록 시간으로도 마무리한다
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        tok.remove(); line.classList.add('done'); setTimeout(() => line.remove(), 900); res();
+      };
       const t0 = performance.now();
       const step = (t) => {
+        if (finished) return;
         const k = Math.max(0, Math.min(1, (t - t0) / dur));
         line.style.strokeDashoffset = `${len * (1 - k)}`;
         const p = line.getPointAtLength(len * k);
         tok.setAttribute('transform', `translate(${p.x} ${p.y}) scale(${scaleK})`);
         if (k < 1) requestAnimationFrame(step);
-        else setTimeout(() => { tok.remove(); line.classList.add('done'); setTimeout(() => line.remove(), 900); res(); }, 120 / speed);
+        else setTimeout(finish, 120 / speed);
       };
       requestAnimationFrame(step);
+      setTimeout(finish, dur + 400);
     });
   }
   function flash(id, kind) {

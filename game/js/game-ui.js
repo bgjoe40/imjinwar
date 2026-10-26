@@ -25,6 +25,8 @@ const UI = (() => {
   }
   const statLine = (g) => { const d = G[g]; return `통${d.lea} 무${d.war} 지${d.int} 정${d.pol} 매${d.cha}`; };
   const skillTags = (g) => G[g].skills.filter(s => s !== 'king').map(s => `<i class="sk">${GD.SKILLS[s]}</i>`).join('');
+  // 장수 고유 전법 (전투에서 쓰는 기술)
+  const actTags = (g) => TB.genActIds(g).sig.map(id => `<i class="sk act" title="${esc(GD.ACTS[id].desc)}">${GD.ACTS[id].name}</i>`).join('');
   function toast(msg, ms = 2600) {
     const t = $('#toast');
     t.innerHTML = Game.josa(msg); t.classList.add('on');
@@ -386,7 +388,8 @@ const UI = (() => {
     if (c.t < 100 && !gens.length) return toast('보낼 군사가 없습니다.');
     const v = await dialog({ title: `${C[cid].name}에서 출진`, wide: true, html: `
       <p class="muted">함께 갈 장수(최대 5명)와 병력을 고른 뒤 지도에서 목표를 누르세요. 우리 고을이면 옮기고, 적의 성이면 공격합니다. 한 번에 갈 수 있는 거리는 이동력 ${Game.mpOf('joseon', [])}(기병만이면 +1)입니다.</p>
-      <div class="pick multi">${gens.map((g, i) => `<label class="pk"><input type="checkbox" value="${g}" ${i < 2 ? 'checked' : ''}>${portrait(g, 's')}<span><b>${G[g].name}</b> <small>${statLine(g)}</small>${skillTags(g)}</span><select data-g="${g}">${typeOptions(g)}</select></label>`).join('') || '<p class="muted">출진할 장수가 없습니다. 장수 없이 군사만 보낼 수도 있습니다.</p>'}</div>
+      <div class="pick multi">${gens.map((g, i) => `<label class="pk"><input type="checkbox" value="${g}" ${i < 2 ? 'checked' : ''}>${portrait(g, 's')}<span><b>${G[g].name}</b> <small>${statLine(g)}</small>${skillTags(g)}${actTags(g)}</span><select data-g="${g}" title="병종에 따라 쓰는 전법이 다릅니다">${typeOptions(g)}</select></label>`).join('') || '<p class="muted">출진할 장수가 없습니다. 장수 없이 군사만 보낼 수도 있습니다.</p>'}</div>
+      <p class="muted small">병종 전법: 보병 방패진 · 궁병 일제 사격·불화살 · 기병 돌격 · 화포 집중 포격 · 의병 매복 · 승병 결사항전. 붉은 글씨는 장수 고유 전법입니다.</p>
       <div class="slider"><span>병력</span><input type="range" id="mT" min="100" max="${Math.max(100, c.t)}" step="100" value="${Math.max(100, Math.round(c.t * 0.7 / 100) * 100)}"><b id="mTv"></b><small>남는 병력 <i id="mTl"></i></small></div>`,
       buttons: [{ label: '취소', value: null }, { label: '목표 고르기 ▶', primary: true, get: (root) => ({ gens: $$('input[type=checkbox]:checked', root).map(x => x.value).slice(0, 5), troops: +$('#mT', root).value, types: Object.fromEntries($$('select[data-g]', root).map(s => [s.dataset.g, s.value])) }) }],
       onMount: (root) => {
@@ -418,7 +421,7 @@ const UI = (() => {
     const gens = Game.gensIn(cid).filter(g => !S().gens[g].acted).sort((a, b) => (G[b].skills.includes('navy') - G[a].skills.includes('navy')) || G[b].lea - G[a].lea);
     const v = await dialog({ title: `${C[cid].name}에서 함대 출진`, wide: true, html: `
       <p class="muted">함대를 이끌 장수와 배를 고른 뒤 지도에서 바다를 누르세요. 적 함대가 있는 바다로 가면 해전이 벌어집니다. 수군 특기 장수가 이끌면 강합니다.</p>
-      <div class="pick multi">${gens.map((g, i) => `<label class="pk"><input type="checkbox" value="${g}" ${i < 3 && G[g].skills.includes('navy') ? 'checked' : ''}>${portrait(g, 's')}<span><b>${G[g].name}</b> <small>${statLine(g)}</small>${skillTags(g)}</span></label>`).join('') || '<p class="muted">장수가 없으면 군관이 이끕니다.</p>'}</div>
+      <div class="pick multi">${gens.map((g, i) => `<label class="pk"><input type="checkbox" value="${g}" ${i < 3 && G[g].skills.includes('navy') ? 'checked' : ''}>${portrait(g, 's')}<span><b>${G[g].name}</b> <small>${statLine(g)}</small>${skillTags(g)}${actTags(g)}</span></label>`).join('') || '<p class="muted">장수가 없으면 군관이 이끕니다.</p>'}</div>
       ${ships.map(([k, n]) => `<div class="slider"><span>${GD.UNITS[k].name}</span><input type="range" data-k="${k}" min="0" max="${n}" value="${n}"><b>${n}척</b></div>`).join('')}`,
       buttons: [{ label: '취소', value: null }, { label: '바다 고르기 ▶', primary: true, get: (root) => ({ gens: $$('input[type=checkbox]:checked', root).map(x => x.value).slice(0, 6), ships: Object.fromEntries($$('input[data-k]', root).map(x => [x.dataset.k, +x.value]).filter(([, n]) => n > 0)) }) }],
       onMount: (root) => $$('input[data-k]', root).forEach(x => x.addEventListener('input', () => { x.nextElementSibling.textContent = x.value + '척'; })) });
@@ -476,11 +479,17 @@ const UI = (() => {
     if (!g) return toast('명령을 기다리는 장수가 없습니다.');
     const r = Game.doCmd('joint', sel, g, v); toast(r.msg); refresh();
   }
+  function actInfo(g) {
+    const { sig, tricks } = TB.genActIds(g);
+    if (!sig.length && !tricks.length) return '';
+    return `<div class="gacts">${sig.map(id => `<p><b class="sk act">${GD.ACTS[id].name}</b> <small>${GD.ACTS[id].hanja} · 고유 전법</small><br><span class="muted small">${esc(GD.ACTS[id].desc)}</span></p>`).join('')}
+      ${tricks.length ? `<p><b>계략</b> ${tricks.map(id => `<i class="sk" title="${esc(GD.ACTS[id].desc)}">${GD.ACTS[id].name}</i>`).join('')}</p>` : ''}</div>`;
+  }
   function genCard(g) {
     const d = G[g], b = bio(g), st = S().gens[g];
     dialog({ title: d.name, html: `<div class="gcard">${portrait(g, 'l')}<div><p><b>${GD.FAC[d.fac].name}</b>${b.role ? ' · ' + esc(b.role) : ''}${b.life ? ` <small>(${b.life})</small>` : ''}</p>
       <div class="gstats">${[['통솔', d.lea], ['무력', d.war], ['지력', d.int], ['정치', d.pol], ['매력', d.cha]].map(([k, v]) => `<div><span>${k}</span><span class="bar"><i style="width:${v}%"></i></span><b>${v}</b></div>`).join('')}</div>
-      <p>${skillTags(g) || ''}</p><p class="muted">${st.st === 'dead' ? '세상을 떠났습니다.' : st.st === 'captive' ? '적에게 사로잡혀 있습니다.' : st.st === 'out' ? '백의종군 중입니다.' : ''}</p></div></div>
+      <p>${skillTags(g) || ''}</p>${actInfo(g)}<p class="muted">${st.st === 'dead' ? '세상을 떠났습니다.' : st.st === 'captive' ? '적에게 사로잡혀 있습니다.' : st.st === 'out' ? '백의종군 중입니다.' : ''}</p></div></div>
       <p class="bio">${esc(b.text)}</p><p class="muted small">능력치는 게임을 위한 가상의 값입니다.</p>` });
   }
 
@@ -665,6 +674,7 @@ const UI = (() => {
       <h4>한 턴</h4><p>한 턴은 한 달입니다(강화 협상기에는 석 달). 고을을 누르고 장수에게 명령을 내린 뒤 <b>턴 종료</b>를 누르면 일본군과 명군이 움직이고, 달말에 재정·수확·보급을 계산합니다. 장수는 한 달에 한 번 명령을 받습니다.</p>
       <h4>명령</h4><ul><li><b>내정</b> — 개간(농업, 가을 수확), 상업(재정), 축성(성벽), 구휼(민심)</li><li><b>군사</b> — 출진(옮기기·공격), 징병, 훈련, 청야(곡식 창고 불태우기)</li><li><b>수군</b> — 함대 출진, 판옥선·거북선 건조</li><li><b>인사</b> — 창의 독려(이웃 점령지의 의병 활동↑)</li><li><b>외교</b> — 명에 원군 요청, 공동 작전</li><li><b>국정</b> — 개혁(훈련도감·속오군·산성 수축 등), 조정 옮기기</li></ul>
       <h4>전투</h4><p>적의 성을 공격하거나 공격받으면 육각형 칸 전장에서 싸웁니다. 부대를 눌러 이동(파란 칸)·공격(붉은 고리)·계략을 명령하세요. 기병은 평지에서 강하고 논·숲·산에서 약합니다. 조선의 활은 조총보다 멀리 쏘지만 위력이 약합니다. 성은 성문·성벽을 부수고 <b>본진</b>을 차지하면 함락됩니다. 지휘하기 번거로우면 <b>위임</b>이나 <b>즉시 결과</b>를 누르세요. 총대장(★)이 쓰러지면 집니다.</p>
+      <h4>전법</h4><p>부대마다 병종에 따라 쓰는 전법이 있습니다 — 보병 <b>방패진</b>, 장창병 장창진, 기병 <b>돌격</b>, 궁병 일제 사격·<b>불화살</b>, 조총병 연속 사격, 화포 집중 포격, 의병 <b>매복</b>, 승병 결사항전, 판옥선 일제 포격, 거북선 충파, 일본 배 등선 돌격. 이름난 장수는 고유 전법을 가집니다(이순신 학익진, 곽재우 홍의 매복, 김시민 총통 수성, 권율 투석전, 신립 배수진, 박진 비격진천뢰, 이여송 불랑기 포격, 시마즈 유인 매복, 가토 성벽 보수 등). 지력이 높은 장수는 <b>화공</b>·혼란을, 매력이 높은 장수는 고무를 씁니다. 부대를 고르고 [전법]을 누르세요. 한 번 쓰면 며칠 동안 다시 쓸 수 없습니다.</p>
       <h4>해전</h4><p>판옥선은 총통으로 멀리서 쏘고, 일본 배는 붙어서 배에 오르려 합니다(등선육박전). 거북선은 적이 오를 수 없습니다. 명량 같은 좁은 물목은 물살이 중간에 바뀝니다.</p>
       <h4>보급과 의병</h4><p>군사는 달마다 군량을 먹습니다. 같은 편 고을끼리 길로 이어져 있으면 군량이 저절로 오갑니다. 일본군은 부산으로 들어오는 본국 군량에 기대므로, <b>남해 바다를 조선 수군이 지키면</b> 서해 뱃길이 막히고, <b>의병</b>이 점령지의 보급을 빼앗습니다.</p>
       <h4>명</h4><p>명군은 컴퓨터가 움직이는 동맹군입니다. 원군 요청을 많이 하면 대군이 일찍 옵니다. 명군 옆의 적 성을 치면 명군이 함께 싸우고, 명군의 군량 일부는 조선이 댑니다.</p>
