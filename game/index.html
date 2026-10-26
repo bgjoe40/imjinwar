@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>칠년전쟁 — 임진왜란 전략 게임</title>
+  <meta name="description" content="임진왜란·정유재란을 배경으로 한 코에이식 턴제 전략 게임. 조선의 조정을 이끌어 7년 전쟁을 이겨 내십시오.">
+  <link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/game.css?v=7">
+</head>
+<body>
+  <div id="title" class="title-screen"></div>
+
+  <div id="app" class="hidden">
+    <header class="g-top">
+      <div class="g-brand"><span class="seal">壬辰</span><b>칠년전쟁</b></div>
+      <div class="g-date" id="tDate"></div>
+      <div class="g-res" id="tRes"></div>
+      <div class="g-btns">
+        <span class="g-phase" id="tPhase"></span>
+        <button class="btn primary" id="tEnd" title="이번 달 명령을 마칩니다">턴 종료 ▶</button>
+        <button class="btn" id="tSave">저장</button>
+        <button class="btn" id="tLoad">불러오기</button>
+        <button class="btn icon" id="tSet" title="설정">⚙</button>
+        <button class="btn icon" id="tHelp" title="게임 방법">?</button>
+        <button class="btn icon" id="tTitle" title="처음 화면">⌂</button>
+      </div>
+    </header>
+    <main class="g-layout">
+      <aside class="g-left" id="left"></aside>
+      <section class="center">
+        <svg id="map" aria-label="전략 지도"></svg>
+        <div class="zoom">
+          <button id="zIn" title="확대">＋</button><button id="zOut" title="축소">－</button>
+          <button id="zFit" title="전체 보기">全</button><button id="zSouth" title="남부 보기">南</button>
+        </div>
+        <div class="legend">
+          <span><i style="background:var(--joseon)"></i>조선</span><span><i style="background:var(--japan)"></i>일본</span><span><i style="background:var(--ming)"></i>명</span>
+          <span><i class="sea-open"></i>일본 보급 뱃길</span><span><i class="sea-block"></i>조선 수군이 막은 바다</span>
+        </div>
+        <div id="tip" class="tip"></div>
+        <div id="modeHint" class="mode-hint"></div>
+        <div id="banner" class="banner"></div>
+      </section>
+      <aside class="g-right" id="right"></aside>
+    </main>
+  </div>
+
+  <div id="battle" class="battle hidden"></div>
+  <div id="dlg" class="dlg hidden"></div>
+  <div id="evt" class="evt hidden"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="../js/data-events.js?v=10"></script>
+  <script src="../js/data-people.js?v=10"></script>
+  <script src="../js/data-mapextra.js?v=10"></script>
+  <script src="js/game-geo.js?v=7"></script>
+  <script src="js/game-data.js?v=7"></script>
+  <script src="js/game-core.js?v=7"></script>
+  <script src="js/game-map.js?v=7"></script>
+  <script src="js/game-battle.js?v=7"></script>
+  <script src="js/game-ai.js?v=7"></script>
+  <script src="js/game-events.js?v=7"></script>
+  <script src="js/game-ui.js?v=7"></script>
+</body>
+</html>
