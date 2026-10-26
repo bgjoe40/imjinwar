@@ -70,6 +70,9 @@ button, select { font-family: inherit; }
 
 /* 상단 버튼 묶음 */
 .top-sep { width: 1px; background: var(--line); margin: 4px 2px; }
+a.btn { display: inline-flex; align-items: center; text-decoration: none; }
+.btn.game-link { border-color: #8a6a35; color: var(--gold); }
+.btn.game-link:hover { border-color: var(--gold); color: #f0cf8a; }
 @media (max-width: 1250px) { .top-controls .tx { display: none; } }
 
 /* 용어 풀이 */
@@ -370,6 +373,7 @@ button, select { font-family: inherit; }
   .brand h1 { font-size: 15px; white-space: nowrap; }
   .top-controls { width: 100%; flex-wrap: wrap; gap: 4px; justify-content: space-between; }
   .top-controls .btn { padding: 5px 7px; font-size: 12px; }
+  .top-controls .game-link .tx { display: inline; }
   .top-sep { display: none; }
   .brand p { display: none; }
   /* 좁은 화면에서는 전투 제목 배너가 [지형] 버튼을 가리므로 숨긴다 (제목은 오른쪽 패널과 해설에 표시) */
