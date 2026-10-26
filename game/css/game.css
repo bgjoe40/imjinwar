@@ -356,12 +356,13 @@ a { color: var(--gold2); }
 .tb-day { text-align: center; }
 .tb-day b { display: block; font-family: var(--serif); font-size: 16px; color: var(--gold2); }
 .tb-day small { color: var(--muted); font-size: 12px; }
-.tb-main { min-height: 0; display: grid; grid-template-columns: 240px 1fr 270px; }
+.tb-main { min-height: 0; overflow: hidden; display: grid; grid-template-columns: 240px 1fr 270px; }
 .tb-left, .tb-right { background: var(--panel); overflow-y: auto; }
 .tb-left { border-right: 1px solid var(--line); padding: 10px; }
 .tb-right { border-left: 1px solid var(--line); display: flex; flex-direction: column; }
-.tb-field { position: relative; min-width: 0; display: grid; place-items: center; background: radial-gradient(ellipse at center, #2a2620, #141210); padding: 8px; }
-.tb-field svg { width: 100%; height: 100%; max-height: 100%; }
+/* 전장은 자기 칸 안에서만 비율을 지키며 커진다 (아래 버튼 줄을 가리지 않도록) */
+.tb-field { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: radial-gradient(ellipse at center, #2a2620, #141210); }
+.tb-field svg { position: absolute; inset: 8px; width: calc(100% - 16px); height: calc(100% - 16px); }
 .tb-float { position: absolute; inset: 0; display: none; place-items: center; background: rgba(0,0,0,.35); }
 .tb-float.on { display: grid; }
 .tb-menu { background: #1d1917; border: 1px solid var(--gold); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; width: 300px; }
@@ -370,7 +371,7 @@ a { color: var(--gold2); }
 .tb-menu button:hover { border-color: var(--gold); }
 .tb-menu button small { display: block; color: var(--muted); font-size: 11.5px; }
 .tb-menu .x { text-align: center; }
-.tb-bottom { display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: #19161a; border-top: 1px solid var(--line); }
+.tb-bottom { position: relative; z-index: 2; display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: #19161a; border-top: 1px solid var(--line); }
 .tb-hint { flex: 1; color: #d8cfbf; font-size: 13px; }
 .tb-btns { display: flex; gap: 6px; flex-wrap: wrap; }
 .tb-btns select { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 5px; }
